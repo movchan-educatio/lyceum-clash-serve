@@ -437,8 +437,14 @@ html[data-embedded="1"] .name-input{display:none!important}
   </div>
 </div>
 
+<script src="/colyseus.js?v=0185"></script>
 <script type="module">
-import { Client } from "https://esm.sh/@colyseus/sdk@0.18.2";
+const Client = window.Colyseus?.Client;
+if(!Client){
+  const status=document.getElementById("status");
+  if(status){status.textContent="Не завантажився клієнт multiplayer. Оновіть сторінку.";status.className="status bad";}
+  throw new Error("COLYSEUS_CLIENT_NOT_LOADED");
+}
 
 const $=id=>document.getElementById(id);
 const HEROES={
@@ -507,16 +513,18 @@ const QUERY_HERO=QUERY.get("hero");
 let room=null,lobby=null,snap=null,myId="",selectedHero=(QUERY_HERO&&HEROES[QUERY_HERO])?QUERY_HERO:(localStorage.getItem("clashHero")||"blaster");
 let input={x:0,y:0},targetInput={x:0,y:0},joyInput={x:0,y:0},keyInput={x:0,y:0},seq=0,joyPointer=null;
 let particles=[],tracers=[],shells=[],rings=[],damageTexts=[],screenShake=0,lastPing=0,pingMs=0,hitStopUntil=0,hitFlash=0;
-let lastFrame=performance.now(),cam={x:864,y:486},resultShown=false,lastAimAngle=0;
+let lastFrame=performance.now(),cam={x:864,y:486},resultShown=false,lastAimAngle=0,pingTimer=0;
 const renderActors=new Map(),renderProjectiles=new Map();
 let staticMapCache={id:"",canvas:null};
 let perfScale=GRAPHICS_MODE==="eco"?.55:1,perfAccum=0,perfFrames=0,perfStamp=performance.now();
+window.__LYCEUM_CLASH_CLIENT_READY=true;
 
 function setStatus(text,type=""){const el=$("status");el.textContent=text;el.className="status "+type}
 function showView(id){document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));$(id).classList.add("active")}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function me(){return snap?.actors?.find(a=>a.id===myId)||null}
 function actorById(id){return snap?.actors?.find(a=>a.id===id)||null}
+setStatus("Сервер готовий • Colyseus 0.18.5","ok");
 
 function buildHeroes(){
   const list=$("heroList");list.innerHTML="";
@@ -621,9 +629,9 @@ function attachRoom(){
   room.onMessage("bell_rush",()=>{sfx("bell");rings.push({x:864,y:486,born:performance.now(),life:1100,color:"#fbbf24"})});
   room.onMessage("match_ended",d=>showResult(d));
   room.onMessage("server_error",d=>setStatus(d.message||d.code,"bad"));
-  room.onLeave(()=>{room=null;showView("homeView");$("battle").classList.remove("active");setStatus("З'єднання закрито","bad")});
+  room.onLeave(()=>{room=null;clearInterval(pingTimer);pingTimer=0;showView("homeView");$("battle").classList.remove("active");setStatus("З’єднання закрито","bad")});
   room.onError((c,m)=>setStatus("ROOM "+c+": "+m,"bad"));
-  setInterval(()=>{if(room){lastPing=performance.now();room.send("ping",{t:Date.now()})}},2500);
+  clearInterval(pingTimer);pingTimer=setInterval(()=>{if(room){lastPing=performance.now();room.send("ping",{t:Date.now()})}},2500);
   room.onMessage("pong",()=>{pingMs=Math.round(performance.now()-lastPing)});
 }
 function renderLobby(){
