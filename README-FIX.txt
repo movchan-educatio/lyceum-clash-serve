@@ -1,20 +1,34 @@
-LYCEUM CLASH SERVER FIX 1.4.1 — NODE 22
+LYCEUM CLASH SERVER FIX 1.4.2
 
-ПРИЧИНА:
-Render запустив сервер на Node.js v26.8.2.
-У package.json було engines.node = ">=20", а Render попереджає, що такий
-необмежений діапазон може автоматично перейти на найновішу major-версію Node.
+ТОЧНА ПРИЧИНА ПОМИЛКИ RENDER:
+SyntaxError: Unexpected identifier 'input'
 
-Для стабільності Colyseus 0.18 сервер тепер зафіксований на Node 22.22.0.
+TEST_HTML у main.js зберігається всередині server-side template string (`...`).
+У попередньому 1.4 debug-коді всередину нього випадково потрапили ще одні
+JavaScript template literals з backticks, наприклад:
+  `input: ${...}`
 
-ЩО ЗАМІНИТИ У GITHUB:
-- main.js
-- package.json
-- render.yaml
-- додати .node-version
+Вони передчасно закривали TEST_HTML і ламали синтаксис main.js на Render.
 
-ДОДАТКОВО У RENDER:
-Settings / Environment -> NODE_VERSION = 22.22.0
+FIX 1.4.2:
+- усі browser debug-рядки переписані на звичайну конкатенацію;
+- всередині TEST_HTML немає жодного nested backtick;
+- немає ${...} interpolation;
+- Node 22.22.0 зафіксований;
+- /test no-cache;
+- рух дозволений у lobby;
+- input_ack показує, чи сервер отримує команди;
+- сторінка має видимий маркер v1.4.2.
 
-Після цього Manual Deploy -> Clear build cache & deploy / Deploy latest commit.
-У логах має бути Node 22.22.0, НЕ Node 26.
+ЩО РОБИТИ:
+1. Замінити у GitHub:
+   main.js
+   package.json
+   render.yaml
+   .node-version
+2. Commit.
+3. Render -> Deploy latest commit.
+4. Після Live відкрити на ОБОХ пристроях:
+   https://lyceum-clash-serve.onrender.com/test?v=142
+5. Переконатися, що на обох видно v1.4.2.
+6. Рух можна тестувати ще ДО START.

@@ -103,9 +103,12 @@ class LyceumClashRoom extends Room {
     if(m>1){dx/=m;dy/=m;}
     p.input={dx,dy};
     if(Number.isFinite(Number(data.angle))) p.angle=Number(data.angle);
-
     client.send("input_ack",{
-      dx,dy,x:Math.round(p.x),y:Math.round(p.y),phase:this.phase,at:Date.now()
+      dx,dy,
+      x:Math.round(p.x),
+      y:Math.round(p.y),
+      phase:this.phase,
+      at:Date.now()
     });
   }
 
@@ -119,7 +122,6 @@ class LyceumClashRoom extends Room {
 
   tick(){
     const now=Date.now();
-
     if(this.phase==="playing" && now>=this.endsAt){
       const ranking=[...this.players.values()].sort((a,b)=>b.score-a.score).map((p,i)=>({
         place:i+1,sessionId:p.sessionId,name:p.name,score:p.score
@@ -131,7 +133,7 @@ class LyceumClashRoom extends Room {
       return;
     }
 
-    // Smoke test: allow movement in lobby as well.
+    // Smoke test: movement works in lobby too, so START is not required.
     const dt=(1000/30)/1000;
     for(const p of this.players.values()){
       if(!p.alive) continue;
@@ -171,7 +173,7 @@ canvas{width:100%;background:#061827;border-radius:12px;aspect-ratio:16/9;touch-
 </style>
 </head>
 <body><div class="wrap">
-<div class="card"><h2>LYCEUM CLASH — SERVER TEST <small style="font-size:12px;color:#55efc4">v1.4</small></h2>
+<div class="card"><h2>LYCEUM CLASH — SERVER TEST <small style="font-size:12px;color:#55efc4">v1.4.2</small></h2>
 <div class="row"><input id="name" value="Учень"><button id="create">СТВОРИТИ</button></div>
 <div class="row"><input id="joinCode" maxlength="12" placeholder="КОД"><button id="join">ПРИЄДНАТИСЯ</button></div>
 <div>Кімната: <b id="code">—</b></div><div id="status">Не підключено</div><div id="debug" style="margin-top:8px;font:12px monospace;color:#93c5fd">input: 0 • ack: — • phase: —</div>
@@ -221,8 +223,8 @@ setInterval(()=>{
   const {dx,dy}=currentInput();
   room.send("input",{dx,dy,angle:aimAngle,seq:++inputSeq});
   sentInputs++;
-  const phase=snapshot?.phase||lobby?.phase||"—";
-  $("debug").textContent=`input: ${sentInputs} • ack: ${lastAck} • phase: ${phase} • held: ${[...held].join(",")||"—"}`;
+  const phase=(snapshot&&snapshot.phase)||(lobby&&lobby.phase)||"—";
+  $("debug").textContent="input: "+sentInputs+" • ack: "+lastAck+" • phase: "+phase+" • held: "+([ ...held ].join(",")||"—");
 },50);
 
 function fire(){
@@ -264,8 +266,8 @@ async function attach(){
   $("status").textContent="Підключено";
   room.onMessage("room_ready",d=>{$("code").textContent=d.code});
   room.onMessage("input_ack",d=>{
-    lastAck=`${d.dx},${d.dy} @ ${d.x},${d.y}`;
-    $("debug").textContent=`input: ${sentInputs} • ack: ${lastAck} • phase: ${d.phase}`;
+    lastAck=String(d.dx)+","+String(d.dy)+" @ "+String(d.x)+","+String(d.y);
+    $("debug").textContent="input: "+sentInputs+" • ack: "+lastAck+" • phase: "+String(d.phase||"—");
   });
   room.onMessage("lobby",d=>{lobby=d;renderLobby()});
   room.onMessage("match_started",d=>{$("status").textContent="МАТЧ ПОЧАВСЯ"});
@@ -293,7 +295,7 @@ const server = defineServer({
   },
   express: (app) => {
     app.get("/", (_req,res)=>res.type("text").send("LYCEUM CLASH server online"));
-    app.get("/health", (_req,res)=>res.json({ok:true,service:"lyceum-clash-server",version:"1.4.0"}));
+    app.get("/health", (_req,res)=>res.json({ok:true,service:"lyceum-clash-server",version:"1.4.2"}));
     app.get("/test", (_req,res)=>{
       res.setHeader("Cache-Control","no-store, no-cache, must-revalidate, proxy-revalidate");
       res.setHeader("Pragma","no-cache");
