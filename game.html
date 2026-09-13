@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>LYCEUM CLASH</title>
+<style>
+:root{
+  --bg:#06101d;--panel:#0d1b2e;--panel2:#132641;--line:#284361;--text:#f3f8ff;--muted:#8fa7c2;
+  --cyan:#4de3ff;--green:#4ef0a6;--gold:#ffd166;--red:#ff647c;--violet:#9d7bff;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;min-height:100%;background:
+radial-gradient(circle at 20% -10%,#15365b 0,transparent 35%),
+radial-gradient(circle at 100% 80%,#052f3a 0,transparent 34%),var(--bg);
+color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;overflow-x:hidden}
+button,input,select{font:inherit}
+button{cursor:pointer}
+.app{min-height:100vh;padding:18px}
+.shell{max-width:1120px;margin:auto}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.brand{display:flex;gap:12px;align-items:center}
+.logo{width:46px;height:46px;border-radius:15px;background:linear-gradient(135deg,#1b8cff,#18d7b7);
+box-shadow:0 10px 30px #008cff44;display:grid;place-items:center;font-size:23px}
+.brand h1{font-size:22px;margin:0;letter-spacing:.4px}.brand small{color:var(--cyan);font-weight:900}
+.server-pill{font-size:12px;padding:8px 11px;border:1px solid var(--line);border-radius:999px;background:#0b1728;color:var(--muted)}
+.card{background:linear-gradient(180deg,#10213aee,#091421f2);border:1px solid #294867;border-radius:22px;box-shadow:0 24px 60px #0007}
+.view{display:none}.view.active{display:block}
+.home-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:14px}
+.hero-stage{padding:18px;min-height:480px;position:relative;overflow:hidden}
+.hero-stage:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 30%,#218cff33,transparent 32%),linear-gradient(transparent,#07111f66)}
+.kicker{font-size:10px;letter-spacing:2px;color:var(--cyan);font-weight:1000}
+.hero-preview{height:230px;display:grid;place-items:center;position:relative}
+.hero-orbit{position:absolute;width:180px;height:70px;border:1px solid #3b82f688;border-radius:50%;transform:rotateX(70deg);box-shadow:0 0 35px #3b82f633}
+.hero-avatar{width:118px;height:118px;border-radius:42% 42% 48% 48%;display:grid;place-items:center;font-size:50px;font-weight:1000;
+border:4px solid #ffffff22;box-shadow:0 20px 50px #0008,0 0 38px currentColor;position:relative;z-index:2}
+.hero-avatar:after{content:"";position:absolute;width:58px;height:16px;right:-36px;top:55px;border-radius:10px;background:linear-gradient(90deg,#dbeafe,#64748b);transform:rotate(-8deg);box-shadow:0 0 12px #fff4}
+.hero-name{font-size:28px;font-weight:1000;text-align:center}.hero-role{text-align:center;color:var(--muted);font-size:13px;margin:4px 0 12px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:#0b1728;border:1px solid var(--line);border-radius:14px;padding:10px;text-align:center}.stat b{display:block;font-size:18px}.stat small{color:var(--muted)}
+.hero-list{display:flex;gap:8px;overflow:auto;padding:12px 0 4px;scrollbar-width:none}.hero-list::-webkit-scrollbar{display:none}
+.hero-chip{min-width:86px;border:1px solid var(--line);background:#0b1728;color:white;padding:10px;border-radius:14px;text-align:center}
+.hero-chip.active{border-color:var(--cyan);box-shadow:0 0 0 2px #4de3ff22 inset}.hero-chip span{font-size:25px;display:block}.hero-chip b{font-size:10px}
+.connect{padding:18px;display:flex;flex-direction:column;gap:12px}
+.connect h2{margin:0 0 2px;font-size:24px}.muted{color:var(--muted);font-size:13px}
+.name-input,.code-input{width:100%;background:#071321;color:#fff;border:1px solid #2c4867;border-radius:14px;padding:14px;font-weight:800;outline:none}
+.name-input:focus,.code-input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px #4de3ff18}
+.primary,.secondary,.danger{border:0;border-radius:15px;padding:14px 16px;font-weight:1000;letter-spacing:.3px}
+.primary{background:linear-gradient(135deg,#168aff,#18c8aa);color:white;box-shadow:0 12px 28px #138dff33}
+.secondary{background:#172c49;color:white;border:1px solid #31506f}.danger{background:#371828;color:#ff8ea0;border:1px solid #663149}
+.divider{text-align:center;color:#5f7895;font-size:11px;font-weight:900}
+.join-row{display:grid;grid-template-columns:1fr auto;gap:8px}
+.status{min-height:38px;padding:9px 11px;border-radius:12px;background:#071321;color:#94a9c0;font-size:12px;border:1px solid #1d334c}
+.status.ok{color:#5ff0b0;border-color:#1b654d}.status.bad{color:#ff8ea0;border-color:#6b2637}
+.lobby{padding:18px}.lobby-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.room-code{font-size:32px;letter-spacing:5px;font-weight:1000;color:var(--cyan)}
+.lobby-grid{display:grid;grid-template-columns:1fr .9fr;gap:14px;margin-top:14px}
+.players{display:grid;gap:8px}.player-slot{background:#0a1727;border:1px solid #294865;border-radius:15px;padding:11px;display:flex;align-items:center;gap:10px}
+.slot-avatar{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;font-weight:1000}
+.slot-info{flex:1}.slot-info b{font-size:13px}.slot-info small{display:block;color:var(--muted);font-size:10px}
+.host-tag{font-size:9px;color:#ffd166;font-weight:1000}.empty{opacity:.45}
+.settings{display:grid;gap:10px}.setting{background:#0a1727;border:1px solid #294865;border-radius:15px;padding:12px}
+.setting-title{font-size:11px;font-weight:1000;margin-bottom:8px;color:#cfe5ff}
+.map-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.map-card{padding:10px 6px;border-radius:12px;border:1px solid #294865;background:#10233b;color:white;text-align:center;font-size:10px;font-weight:900}
+.map-card.active{border-color:var(--cyan);box-shadow:0 0 0 2px #4de3ff22 inset}.toggle{display:flex;align-items:center;justify-content:space-between}
+.switch{width:48px;height:26px;background:#20384f;border-radius:20px;padding:3px}.switch i{display:block;width:20px;height:20px;border-radius:50%;background:#7b91aa;transition:.2s}.switch.on{background:#125f50}.switch.on i{transform:translateX(22px);background:#55efc4}
+.lobby-actions{display:flex;gap:8px;margin-top:14px}.lobby-actions .primary{flex:1}
+.battle-wrap{position:fixed;inset:0;background:#030912;z-index:20;display:none}.battle-wrap.active{display:block}
+#game{width:100vw;height:100vh;display:block;touch-action:none}
+.hud{position:fixed;inset:0;pointer-events:none;z-index:25}.hud-top{display:flex;justify-content:space-between;align-items:start;padding:12px}
+.hud-box{background:#071321dd;border:1px solid #345270;border-radius:14px;padding:9px 12px;backdrop-filter:blur(10px);box-shadow:0 10px 30px #0005}
+.timer{font-size:22px;font-weight:1000;color:#fff}.score{font-size:12px;color:#a8bfd6}.bot-label{font-size:10px;color:#55efc4;font-weight:900}
+.hp-wrap{position:fixed;left:12px;bottom:16px;width:min(330px,46vw)}.bar{height:15px;background:#1a2938;border:1px solid #45617d;border-radius:999px;overflow:hidden}
+.bar i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#1ddc92,#9cf56b)}.bar.super i{background:linear-gradient(90deg,#8059ff,#43d9ff)}
+.bar-label{display:flex;justify-content:space-between;font-size:10px;font-weight:900;margin:4px 2px;color:#dcecff}
+.joystick{position:fixed;left:22px;bottom:78px;width:136px;height:136px;border-radius:50%;background:#0c1d31a8;border:2px solid #486986;pointer-events:auto;touch-action:none}
+.joy-knob{position:absolute;left:43px;top:43px;width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,#55d6ff,#1867e8);box-shadow:0 8px 22px #0007}
+.actions{position:fixed;right:22px;bottom:70px;display:flex;gap:12px;align-items:end;pointer-events:auto}
+.action{border:0;border-radius:50%;width:84px;height:84px;color:white;font-weight:1000;box-shadow:0 14px 35px #0008;touch-action:none}
+.fire{background:radial-gradient(circle at 35% 30%,#ff8a77,#d91f47)}.super{width:70px;height:70px;background:radial-gradient(circle at 35% 30%,#b78cff,#5b2bc8);opacity:.45}.super.ready{opacity:1;box-shadow:0 0 28px #8b5cf6aa}
+.exit-battle{position:fixed;right:12px;top:62px;pointer-events:auto;background:#171d28cc;border:1px solid #475569;color:white;border-radius:12px;padding:8px 10px;font-weight:900}
+.killfeed{position:fixed;right:12px;top:110px;width:220px;display:grid;gap:5px}.kill{background:#071321c9;border:1px solid #294865;padding:7px 9px;border-radius:10px;font-size:10px;animation:fadeKill 3s forwards}
+@keyframes fadeKill{0%,75%{opacity:1}100%{opacity:0}}
+.result{position:fixed;inset:0;background:#020712e8;z-index:40;display:none;place-items:center;padding:20px}.result.active{display:grid}.result-card{width:min(520px,96vw);padding:20px}
+.rank-row{display:grid;grid-template-columns:45px 1fr auto;gap:10px;padding:10px;border-bottom:1px solid #294865;align-items:center}
+.fx-flash{position:fixed;inset:0;pointer-events:none;z-index:30;box-shadow:inset 0 0 120px transparent}
+@media(max-width:800px){
+  .app{padding:10px}.home-grid,.lobby-grid{grid-template-columns:1fr}.hero-stage{min-height:410px}.hero-preview{height:190px}
+  .connect{padding:14px}.lobby{padding:14px}.joystick{width:126px;height:126px;left:12px;bottom:72px}.joy-knob{left:38px;top:38px}
+  .actions{right:12px;bottom:68px}.action{width:76px;height:76px}.super{width:64px;height:64px}
+  .killfeed{display:none}.server-pill{display:none}.hp-wrap{width:46vw}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="shell">
+    <div class="topbar">
+      <div class="brand"><div class="logo">⚡</div><div><h1>LYCEUM CLASH</h1><small>COLYSEUS ARENA • v2.0</small></div></div>
+      <div class="server-pill" id="serverPill">● сервер</div>
+    </div>
+
+    <section id="homeView" class="view active">
+      <div class="home-grid">
+        <div class="card hero-stage">
+          <div class="kicker">ОБЕРИ БІЙЦЯ</div>
+          <div class="hero-preview">
+            <div class="hero-orbit"></div>
+            <div id="heroAvatar" class="hero-avatar">⚡</div>
+          </div>
+          <div id="heroName" class="hero-name">Бластер</div>
+          <div id="heroRole" class="hero-role">Універсальний боєць</div>
+          <div class="stats">
+            <div class="stat"><b id="heroHp">100</b><small>HP</small></div>
+            <div class="stat"><b id="heroSpeed">230</b><small>ШВИДКІСТЬ</small></div>
+            <div class="stat"><b id="heroDamage">24</b><small>ШКОДА</small></div>
+          </div>
+          <div id="heroList" class="hero-list"></div>
+        </div>
+
+        <div class="card connect">
+          <div class="kicker">MULTIPLAYER</div>
+          <h2>Готовий до дзвінка?</h2>
+          <div class="muted">Створи кімнату або введи код друга. До 5 бійців; вільні місця заповнять SMART BOTS.</div>
+          <input id="playerName" class="name-input" maxlength="20" placeholder="Твоє ім'я" value="Учень">
+          <button id="createBtn" class="primary">✨ СТВОРИТИ КІМНАТУ</button>
+          <div class="divider">АБО</div>
+          <div class="join-row">
+            <input id="joinCode" class="code-input" placeholder="КОД КІМНАТИ">
+            <button id="joinBtn" class="secondary">ПРИЄДНАТИСЯ</button>
+          </div>
+          <div id="status" class="status">Підключення до сервера…</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="lobbyView" class="view">
+      <div class="card lobby">
+        <div class="lobby-head">
+          <div><div class="kicker">КІМНАТА</div><div id="roomCode" class="room-code">—</div></div>
+          <div id="lobbyStatus" class="muted">Очікуємо гравців…</div>
+        </div>
+        <div class="lobby-grid">
+          <div>
+            <div class="kicker" style="margin-bottom:8px">КОМАНДА</div>
+            <div id="playerSlots" class="players"></div>
+          </div>
+          <div class="settings">
+            <div class="setting">
+              <div class="setting-title">АРЕНА</div>
+              <div id="mapGrid" class="map-grid">
+                <button class="map-card active" data-map="hall">🏫<br>ХОЛ</button>
+                <button class="map-card" data-map="library">📚<br>БІБЛІОТЕКА</button>
+                <button class="map-card" data-map="gym">🏀<br>СПОРТЗАЛ</button>
+              </div>
+            </div>
+            <div class="setting toggle">
+              <div><div class="setting-title" style="margin:0">SMART BOTS</div><div class="muted">Заповнити арену до 5 бійців</div></div>
+              <div id="botSwitch" class="switch on"><i></i></div>
+            </div>
+          </div>
+        </div>
+        <div class="lobby-actions">
+          <button id="startBtn" class="primary">▶ ПОЧАТИ МАТЧ</button>
+          <button id="leaveBtn" class="danger">ВИЙТИ</button>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div id="battle" class="battle-wrap">
+  <canvas id="game"></canvas>
+  <div class="hud">
+    <div class="hud-top">
+      <div class="hud-box"><div id="timer" class="timer">1:15</div><div id="myScore" class="score">0 балів</div></div>
+      <div class="hud-box"><div id="fighterCount" class="bot-label">🤖 0 SMART BOTS</div><div id="pingText" class="score">WebSocket</div></div>
+    </div>
+    <button id="exitBattle" class="exit-battle">✕</button>
+    <div id="killfeed" class="killfeed"></div>
+    <div class="hp-wrap">
+      <div class="bar-label"><span>HP</span><span id="hpText">100/100</span></div>
+      <div class="bar"><i id="hpBar"></i></div>
+      <div class="bar-label"><span>SUPER</span><span id="superText">0%</span></div>
+      <div class="bar super"><i id="superBar" style="width:0%"></i></div>
+    </div>
+    <div id="joystick" class="joystick"><div id="joyKnob" class="joy-knob"></div></div>
+    <div class="actions">
+      <button id="superBtn" class="action super">SUPER</button>
+      <button id="fireBtn" class="action fire">FIRE</button>
+    </div>
+  </div>
+</div>
+
+<div id="result" class="result">
+  <div class="card result-card">
+    <div class="kicker">РЕЗУЛЬТАТ МАТЧУ</div>
+    <h2 id="resultTitle">Фініш!</h2>
+    <div id="ranking"></div>
+    <button id="backLobbyBtn" class="primary" style="width:100%;margin-top:14px">ПОВЕРНУТИСЯ В LOBBY</button>
+  </div>
+</div>
+
+<script type="module">
+import { Client } from "https://esm.sh/@colyseus/sdk@0.18.2";
+
+const $=id=>document.getElementById(id);
+const HEROES={
+  blaster:{name:"Бластер",icon:"⚡",role:"Універсальний боєць",hp:100,speed:230,damage:24,color:"#38bdf8"},
+  sprinter:{name:"Спринтер",icon:"🏃",role:"Швидкість і тиск",hp:88,speed:275,damage:19,color:"#34d399"},
+  scholar:{name:"Ерудит",icon:"📘",role:"Стійкий тактик",hp:108,speed:215,damage:23,color:"#60a5fa"},
+  hacker:{name:"Хакер",icon:"💻",role:"Швидкий контроль",hp:94,speed:240,damage:22,color:"#22d3ee"},
+  historian:{name:"Хроніст",icon:"⏳",role:"Важкий постріл",hp:112,speed:205,damage:26,color:"#f59e0b"},
+  geographer:{name:"Географ",icon:"🌍",role:"Збалансований контроль",hp:106,speed:220,damage:23,color:"#2dd4bf"},
+  chemist:{name:"Хімік",icon:"🧪",role:"Висока шкода",hp:102,speed:218,damage:27,color:"#84cc16"},
+  artist:{name:"Митець",icon:"🎨",role:"Маневрений боєць",hp:94,speed:238,damage:21,color:"#fb7185"},
+  musician:{name:"DJ",icon:"🎧",role:"Швидкий вогонь",hp:96,speed:235,damage:20,color:"#c084fc"},
+  guardian:{name:"Захисник",icon:"🛡️",role:"Танк і лікування",hp:132,speed:188,damage:26,color:"#fbbf24"},
+  phantom:{name:"Фантом",icon:"👻",role:"Ривок і мобільність",hp:90,speed:260,damage:22,color:"#a78bfa"},
+  captain:{name:"Капітан",icon:"⭐",role:"Сильний універсал",hp:118,speed:210,damage:25,color:"#facc15"},
+  sniper:{name:"Снайпер",icon:"🎯",role:"Далекий удар",hp:84,speed:205,damage:36,color:"#fb7185"},
+  medic:{name:"Медик",icon:"🩺",role:"Підтримка",hp:104,speed:220,damage:19,color:"#4ade80"},
+  engineer:{name:"Інженер",icon:"⚙️",role:"Технічний боєць",hp:114,speed:205,damage:25,color:"#fb923c"},
+  stormer:{name:"Штормер",icon:"🌩️",role:"Агресивний темп",hp:100,speed:242,damage:22,color:"#60a5fa"},
+  illusionist:{name:"Ілюзіоніст",icon:"🎭",role:"Мобільний дуелянт",hp:90,speed:252,damage:21,color:"#e879f9"}
+};
+const MAPS={
+  hall:{name:"Головний хол",floor:"#0c2236",line:"#1c4864",accent:"#4de3ff",obs:"#17354d"},
+  library:{name:"Бібліотека",floor:"#251c1b",line:"#4c342b",accent:"#fbbf24",obs:"#4a3025"},
+  gym:{name:"Спортзал",floor:"#18253b",line:"#365a86",accent:"#fb7185",obs:"#20334e"}
+};
+const OBSTACLES={
+  hall:[{x:360,y:190,w:190,h:72},{x:1178,y:190,w:190,h:72},{x:360,y:710,w:190,h:72},{x:1178,y:710,w:190,h:72},{x:760,y:355,w:208,h:64},{x:760,y:553,w:208,h:64}],
+  library:[{x:280,y:160,w:120,h:250},{x:510,y:160,w:120,h:250},{x:1098,y:160,w:120,h:250},{x:1328,y:160,w:120,h:250},{x:280,y:565,w:120,h:250},{x:510,y:565,w:120,h:250},{x:1098,y:565,w:120,h:250},{x:1328,y:565,w:120,h:250}],
+  gym:[{x:180,y:225,w:150,h:55},{x:1398,y:225,w:150,h:55},{x:180,y:692,w:150,h:55},{x:1398,y:692,w:150,h:55},{x:780,y:235,w:168,h:54},{x:780,y:683,w:168,h:54}]
+};
+
+const client=new Client(location.origin);
+let room=null,lobby=null,snap=null,myId="",selectedHero=localStorage.getItem("clashHero")||"blaster";
+let input={x:0,y:0},seq=0,joyPointer=null,particles=[],tracers=[],damageTexts=[],screenShake=0,lastPing=0,pingMs=0;
+let lastFrame=performance.now(),cam={x:864,y:486},resultShown=false;
+
+function setStatus(text,type=""){const el=$("status");el.textContent=text;el.className="status "+type}
+function showView(id){document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));$(id).classList.add("active")}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function me(){return snap?.actors?.find(a=>a.id===myId)||null}
+function actorById(id){return snap?.actors?.find(a=>a.id===id)||null}
+
+function buildHeroes(){
+  const list=$("heroList");list.innerHTML="";
+  Object.entries(HEROES).forEach(([id,h])=>{
+    const b=document.createElement("button");b.className="hero-chip"+(id===selectedHero?" active":"");
+    b.innerHTML="<span>"+h.icon+"</span><b>"+esc(h.name)+"</b>";
+    b.onclick=()=>{selectedHero=id;localStorage.setItem("clashHero",id);renderHero();buildHeroes();if(room&&lobby?.phase==="lobby")room.send("hero",{hero:id})};
+    list.appendChild(b);
+  });
+}
+function renderHero(){
+  const h=HEROES[selectedHero];$("heroAvatar").textContent=h.icon;$("heroAvatar").style.background="linear-gradient(135deg,"+h.color+"55,"+h.color+"cc)";
+  $("heroAvatar").style.color=h.color;$("heroName").textContent=h.name;$("heroRole").textContent=h.role;
+  $("heroHp").textContent=h.hp;$("heroSpeed").textContent=h.speed;$("heroDamage").textContent=h.damage;
+}
+buildHeroes();renderHero();
+
+async function connectCreate(){
+  try{
+    setStatus("Створюю кімнату…");
+    room=await client.create("lyceum_clash",{name:$("playerName").value||"Учень",hero:selectedHero});
+    attachRoom();showView("lobbyView");setStatus("Кімнату створено","ok");
+  }catch(e){setStatus("CREATE: "+(e?.message||e),"bad")}
+}
+async function connectJoin(){
+  const code=$("joinCode").value.trim();
+  if(!code)return setStatus("Введи код кімнати","bad");
+  try{
+    setStatus("Приєднуюся…");
+    room=await client.joinById(code,{name:$("playerName").value||"Учень",hero:selectedHero});
+    attachRoom();showView("lobbyView");setStatus("Приєднано","ok");
+  }catch(e){setStatus("JOIN: "+(e?.message||e),"bad")}
+}
+function attachRoom(){
+  myId=room.sessionId;$("roomCode").textContent=room.roomId;resultShown=false;
+  room.onMessage("room_ready",d=>{$("roomCode").textContent=d.code;myId=d.sessionId});
+  room.onMessage("lobby",d=>{lobby=d;renderLobby()});
+  room.onMessage("host_changed",d=>{if(lobby){lobby.hostSessionId=d.hostSessionId;renderLobby()}});
+  room.onMessage("match_started",d=>{resultShown=false;startBattle();addFx(864,486,"#ffd166",36,260)});
+  room.onMessage("snapshot",d=>{
+    snap=d;
+    if((d.phase==="playing"||d.phase==="countdown")&&!$("battle").classList.contains("active"))startBattle();
+    updateHud();
+  });
+  room.onMessage("shot",d=>{
+    const a=actorById(d.by);if(!a)return;
+    const len=Math.min(d.range||520,260);
+    tracers.push({x:a.x,y:a.y,x2:a.x+Math.cos(d.angle)*len,y2:a.y+Math.sin(d.angle)*len,born:performance.now(),color:HEROES[a.hero]?.color||"#fff"});
+    addFx(a.x+Math.cos(d.angle)*30,a.y+Math.sin(d.angle)*30,HEROES[a.hero]?.color||"#fff",6,70);
+    sfx("shot");
+  });
+  room.onMessage("hit",d=>{
+    const t=actorById(d.target);if(t){addFx(t.x,t.y,"#ff5f7c",15,130);damageTexts.push({x:t.x,y:t.y-35,text:"-"+d.damage,born:performance.now()});}
+    if(d.target===myId){screenShake=Math.max(screenShake,8);sfx("hit");try{navigator.vibrate?.(12)}catch(_){}}
+  });
+  room.onMessage("ko",d=>{
+    const a=actorById(d.by),t=actorById(d.target);addKill((a?.name||"Бійць")+" ⚡ "+(t?.name||"Бійць"));
+    if(t){addFx(t.x,t.y,"#ff647c",34,260);damageTexts.push({x:t.x,y:t.y-45,text:"KO!",born:performance.now(),ko:true});}
+    screenShake=Math.max(screenShake,10);sfx("ko");
+  });
+  room.onMessage("super",d=>{addFx(d.x,d.y,d.type==="heal"?"#55efc4":"#a78bfa",46,320);screenShake=Math.max(screenShake,7);sfx("super")});
+  room.onMessage("respawn",d=>{const a=actorById(d.sessionId);if(a)addFx(a.x,a.y,"#55efc4",24,220)});
+  room.onMessage("match_ended",d=>showResult(d));
+  room.onMessage("server_error",d=>setStatus(d.message||d.code,"bad"));
+  room.onLeave(()=>{room=null;showView("homeView");$("battle").classList.remove("active");setStatus("З'єднання закрито","bad")});
+  room.onError((c,m)=>setStatus("ROOM "+c+": "+m,"bad"));
+  setInterval(()=>{if(room){lastPing=performance.now();room.send("ping",{t:Date.now()})}},2500);
+  room.onMessage("pong",()=>{pingMs=Math.round(performance.now()-lastPing)});
+}
+function renderLobby(){
+  if(!lobby||!room)return;
+  $("roomCode").textContent=lobby.code;
+  const isHost=myId===lobby.hostSessionId;
+  $("startBtn").style.display=isHost?"block":"none";
+  $("lobbyStatus").textContent=(lobby.players?.length||0)+" гравців • "+(lobby.botFill?"SMART BOTS ON":"без ботів");
+  const slots=[];
+  for(let i=0;i<5;i++){
+    const p=lobby.players?.find(x=>x.slot===i);
+    if(p){
+      const h=HEROES[p.hero]||HEROES.blaster;
+      slots.push('<div class="player-slot"><div class="slot-avatar" style="background:'+h.color+'33;color:'+h.color+'">'+h.icon+'</div><div class="slot-info"><b>'+esc(p.name)+'</b><small>'+esc(h.name)+'</small></div>'+(p.sessionId===lobby.hostSessionId?'<span class="host-tag">HOST</span>':'')+'</div>');
+    }else slots.push('<div class="player-slot empty"><div class="slot-avatar">+</div><div class="slot-info"><b>Вільний слот</b><small>'+(lobby.botFill?"SMART BOT у матчі":"очікуємо учня")+'</small></div></div>');
+  }
+  $("playerSlots").innerHTML=slots.join("");
+  document.querySelectorAll(".map-card").forEach(b=>{b.classList.toggle("active",b.dataset.map===lobby.map);b.disabled=!isHost});
+  $("botSwitch").classList.toggle("on",!!lobby.botFill);$("botSwitch").style.pointerEvents=isHost?"auto":"none";
+}
+$("createBtn").onclick=connectCreate;$("joinBtn").onclick=connectJoin;
+$("startBtn").onclick=()=>room?.send("start");
+$("leaveBtn").onclick=()=>room?.leave();
+document.querySelectorAll(".map-card").forEach(b=>b.onclick=()=>room?.send("map",{map:b.dataset.map}));
+$("botSwitch").onclick=()=>room?.send("bots",{enabled:!lobby?.botFill});
+
+function startBattle(){
+  $("battle").classList.add("active");$("result").classList.remove("active");
+  resize();sfx("start");
+}
+$("exitBattle").onclick=()=>{if(confirm("Вийти з матчу?"))room?.leave()};
+$("backLobbyBtn").onclick=()=>{$("result").classList.remove("active");$("battle").classList.remove("active");showView("lobbyView")};
+
+const canvas=$("game"),ctx=canvas.getContext("2d");
+function resize(){const d=Math.min(2,devicePixelRatio||1);canvas.width=Math.floor(innerWidth*d);canvas.height=Math.floor(innerHeight*d);canvas.style.width=innerWidth+"px";canvas.style.height=innerHeight+"px";ctx.setTransform(d,0,0,d,0,0)}
+addEventListener("resize",resize);resize();
+
+function worldTransform(){
+  const local=me();if(local){cam.x+=(local.x-cam.x)*.09;cam.y+=(local.y-cam.y)*.09}
+  const mobile=innerWidth<800,scale=mobile?Math.max(innerWidth/980,innerHeight/650)*1.35:Math.min(innerWidth/1450,innerHeight/850)*1.08;
+  const sx=innerWidth/2-cam.x*scale,sy=innerHeight/2-cam.y*scale;
+  return{scale,sx,sy};
+}
+function drawMap(t){
+  const mapId=snap?.map||lobby?.map||"hall",m=MAPS[mapId]||MAPS.hall;
+  ctx.save();ctx.translate(t.sx,t.sy);ctx.scale(t.scale,t.scale);
+  ctx.fillStyle=m.floor;ctx.fillRect(0,0,1728,972);
+  ctx.strokeStyle=m.line;ctx.lineWidth=2;
+  for(let x=0;x<=1728;x+=96){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,972);ctx.stroke()}
+  for(let y=0;y<=972;y+=96){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(1728,y);ctx.stroke()}
+  if(mapId==="gym"){
+    ctx.strokeStyle="#ffffff33";ctx.lineWidth=8;ctx.strokeRect(210,120,1308,732);ctx.beginPath();ctx.arc(864,486,125,0,Math.PI*2);ctx.stroke();
+  }else if(mapId==="library"){
+    ctx.fillStyle="#ffffff10";ctx.font="900 54px system-ui";ctx.fillText("LIBRARY",690,110);
+  }else{
+    ctx.fillStyle="#ffffff0c";ctx.font="900 52px system-ui";ctx.fillText("LYCEUM",750,105);
+  }
+  const pulse=1+Math.sin(performance.now()/260)*.06;
+  ctx.beginPath();ctx.arc(864,486,126*pulse,0,Math.PI*2);ctx.fillStyle=m.accent+"16";ctx.fill();ctx.strokeStyle=m.accent+"aa";ctx.lineWidth=4;ctx.stroke();
+  ctx.font="42px system-ui";ctx.textAlign="center";ctx.fillStyle=m.accent;ctx.fillText("🔔",864,500);
+  for(const o of OBSTACLES[mapId]||OBSTACLES.hall){
+    ctx.fillStyle="#0005";roundRect(ctx,o.x+8,o.y+10,o.w,o.h,16);ctx.fill();
+    ctx.fillStyle=m.obs;roundRect(ctx,o.x,o.y,o.w,o.h,16);ctx.fill();ctx.strokeStyle=m.line;ctx.lineWidth=3;ctx.stroke();
+    ctx.fillStyle="#ffffff10";roundRect(ctx,o.x+10,o.y+9,o.w-20,12,6);ctx.fill();
+  }
+  ctx.restore();
+}
+function roundRect(c,x,y,w,h,r){c.beginPath();c.roundRect(x,y,w,h,r)}
+function drawActor(a,t){
+  const h=HEROES[a.hero]||HEROES.blaster,local=a.id===myId;
+  ctx.save();ctx.translate(t.sx+a.x*t.scale,t.sy+a.y*t.scale);ctx.scale(t.scale,t.scale);
+  ctx.globalAlpha=a.alive?1:.22;
+  ctx.fillStyle="#0007";ctx.beginPath();ctx.ellipse(0,18,28,12,0,0,Math.PI*2);ctx.fill();
+  ctx.rotate(a.angle||0);
+  ctx.fillStyle="#dbeafe";roundRect(ctx,12,-7,42,14,7);ctx.fill();ctx.fillStyle=h.color;roundRect(ctx,38,-5,20,10,5);ctx.fill();
+  ctx.rotate(-(a.angle||0));
+  ctx.fillStyle=h.color+"55";ctx.strokeStyle=local?"#ffffff":h.color;ctx.lineWidth=local?5:3;ctx.beginPath();ctx.arc(0,0,27,0,Math.PI*2);ctx.fill();ctx.stroke();
+  ctx.fillStyle=h.color;ctx.beginPath();ctx.arc(0,-7,18,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="#eaf4ff";ctx.beginPath();ctx.arc(-6,-10,3,0,Math.PI*2);ctx.arc(6,-10,3,0,Math.PI*2);ctx.fill();
+  if(a.isBot){ctx.fillStyle="#55efc4";ctx.font="900 8px system-ui";ctx.textAlign="center";ctx.fillText("BOT",0,4)}
+  ctx.rotate(0);ctx.textAlign="center";ctx.fillStyle="#fff";ctx.font="900 12px system-ui";ctx.fillText(a.name,0,-42);
+  if(a.score>0){ctx.fillStyle="#ffd166";ctx.font="900 10px system-ui";ctx.fillText("★ "+a.score,0,-29)}
+  const hp=Math.max(0,a.hp/a.maxHp);ctx.fillStyle="#11202f";roundRect(ctx,-28,34,56,7,4);ctx.fill();ctx.fillStyle=hp>.5?"#55efc4":hp>.25?"#ffd166":"#ff647c";roundRect(ctx,-28,34,56*hp,7,4);ctx.fill();
+  ctx.restore();
+}
+function addFx(x,y,color,count=12,power=130){for(let i=0;i<count;i++){const a=Math.random()*Math.PI*2,s=(.35+Math.random())*power;particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:350+Math.random()*350,born:performance.now(),color})}}
+function drawFx(t,now,dt){
+  particles=particles.filter(p=>now-p.born<p.life);for(const p of particles){p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=.94;p.vy*=.94;const q=1-(now-p.born)/p.life;ctx.fillStyle=p.color;ctx.globalAlpha=q;ctx.beginPath();ctx.arc(t.sx+p.x*t.scale,t.sy+p.y*t.scale,Math.max(1,4*q*t.scale),0,Math.PI*2);ctx.fill()}
+  ctx.globalAlpha=1;
+  tracers=tracers.filter(s=>now-s.born<150);for(const s of tracers){const q=1-(now-s.born)/150;ctx.globalAlpha=q;ctx.strokeStyle=s.color;ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(t.sx+s.x*t.scale,t.sy+s.y*t.scale);ctx.lineTo(t.sx+s.x2*t.scale,t.sy+s.y2*t.scale);ctx.stroke()}ctx.globalAlpha=1;
+  damageTexts=damageTexts.filter(d=>now-d.born<700);for(const d of damageTexts){const q=(now-d.born)/700;ctx.globalAlpha=1-q;ctx.fillStyle=d.ko?"#ffd166":"#fff";ctx.font=(d.ko?"1000 24px":"900 17px")+" system-ui";ctx.textAlign="center";ctx.fillText(d.text,t.sx+d.x*t.scale,t.sy+(d.y-q*35)*t.scale)}ctx.globalAlpha=1;
+}
+function frame(now){
+  const dt=Math.min(.033,(now-lastFrame)/1000);lastFrame=now;
+  ctx.clearRect(0,0,innerWidth,innerHeight);
+  const t=worldTransform();
+  if(screenShake>0){const ox=(Math.random()-.5)*screenShake,oy=(Math.random()-.5)*screenShake;t.sx+=ox;t.sy+=oy;screenShake*=.88}
+  drawMap(t);
+  (snap?.actors||[]).slice().sort((a,b)=>a.y-b.y).forEach(a=>drawActor(a,t));
+  drawFx(t,now,dt);
+  requestAnimationFrame(frame);
+}requestAnimationFrame(frame);
+
+function updateHud(){
+  const a=me();if(!a)return;
+  const remain=Math.max(0,Math.ceil(((snap?.endsAt||Date.now())-Date.now())/1000));$("timer").textContent=Math.floor(remain/60)+":"+String(remain%60).padStart(2,"0");
+  $("myScore").textContent=a.score+" балів";$("hpText").textContent=Math.round(a.hp)+"/"+a.maxHp;$("hpBar").style.width=Math.max(0,a.hp/a.maxHp*100)+"%";
+  $("superText").textContent=Math.round(a.super)+"%";$("superBar").style.width=a.super+"%";$("superBtn").classList.toggle("ready",a.super>=100);
+  const bots=(snap?.actors||[]).filter(x=>x.isBot).length;$("fighterCount").textContent="🤖 "+bots+" SMART BOTS";$("pingText").textContent=pingMs?pingMs+" ms":"WebSocket";
+}
+function autoAim(){
+  const a=me();if(!a)return a?.angle||0;let best=null,bd=Infinity;
+  for(const t of snap?.actors||[]){if(t.id===a.id||!t.alive)continue;const d=Math.hypot(t.x-a.x,t.y-a.y);if(d<bd){bd=d;best=t}}
+  return best?Math.atan2(best.y-a.y,best.x-a.x):(a.angle||0);
+}
+function sendInput(){if(!room)return;room.send("input",{dx:input.x,dy:input.y,angle:Math.hypot(input.x,input.y)>.08?Math.atan2(input.y,input.x):autoAim(),seq:++seq})}
+setInterval(sendInput,50);
+$("fireBtn").onpointerdown=e=>{e.preventDefault();room?.send("shoot",{angle:autoAim()})};
+$("superBtn").onpointerdown=e=>{e.preventDefault();room?.send("super")};
+
+const joy=$("joystick"),knob=$("joyKnob");
+function joyMove(e){
+  const r=joy.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,dx=e.clientX-cx,dy=e.clientY-cy,max=r.width*.34,m=Math.hypot(dx,dy)||1,k=Math.min(1,max/m);
+  const px=dx*k,py=dy*k;knob.style.transform="translate("+px+"px,"+py+"px)";input.x=px/max;input.y=py/max;
+}
+joy.onpointerdown=e=>{joyPointer=e.pointerId;joy.setPointerCapture(e.pointerId);joyMove(e)};
+joy.onpointermove=e=>{if(e.pointerId===joyPointer)joyMove(e)};
+function joyEnd(e){if(e.pointerId!==joyPointer)return;joyPointer=null;input.x=0;input.y=0;knob.style.transform="translate(0,0)"}
+joy.onpointerup=joyEnd;joy.onpointercancel=joyEnd;
+
+const keys=new Set();
+addEventListener("keydown",e=>{keys.add(e.code);if(e.code==="Space"){e.preventDefault();room?.send("shoot",{angle:autoAim()})}if(e.code==="KeyE")room?.send("super")});
+addEventListener("keyup",e=>keys.delete(e.code));
+setInterval(()=>{let x=0,y=0;if(keys.has("KeyA")||keys.has("ArrowLeft"))x--;if(keys.has("KeyD")||keys.has("ArrowRight"))x++;if(keys.has("KeyW")||keys.has("ArrowUp"))y--;if(keys.has("KeyS")||keys.has("ArrowDown"))y++;if(x||y){const m=Math.hypot(x,y)||1;input.x=x/m;input.y=y/m}else if(joyPointer===null){input.x=0;input.y=0}},16);
+
+function addKill(text){const k=document.createElement("div");k.className="kill";k.textContent=text;$("killfeed").prepend(k);setTimeout(()=>k.remove(),3200)}
+function showResult(d){
+  resultShown=true;$("result").classList.add("active");const win=d.winner;$("resultTitle").textContent=win?(win.name+" переміг!"):("Матч завершено");
+  $("ranking").innerHTML=(d.ranking||[]).slice(0,5).map(r=>'<div class="rank-row"><b>#'+r.place+'</b><span>'+esc(r.name)+(r.isBot?' 🤖':'')+'</span><b>'+r.score+'★</b></div>').join("");
+}
+let audioCtx=null;
+function sfx(type){
+  try{
+    audioCtx=audioCtx||new (AudioContext||webkitAudioContext)();const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.connect(g);g.connect(audioCtx.destination);
+    const f={shot:180,hit:110,ko:70,super:420,start:280}[type]||200;o.frequency.value=f;o.type=type==="super"?"sine":"square";g.gain.setValueAtTime(.035,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+.09);o.start();o.stop(audioCtx.currentTime+.1);
+  }catch(_){}
+}
+fetch("/health",{cache:"no-store"}).then(r=>r.json()).then(d=>{$("serverPill").textContent="● SERVER v"+d.version;$("serverPill").style.color="#55efc4";setStatus("Сервер готовий • Colyseus WebSocket","ok")}).catch(()=>setStatus("Сервер недоступний","bad"));
+</script>
+</body>
+</html>
