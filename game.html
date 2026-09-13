@@ -96,7 +96,7 @@ border:4px solid #ffffff22;box-shadow:0 20px 50px #0008,0 0 38px currentColor;po
 <div class="app">
   <div class="shell">
     <div class="topbar">
-      <div class="brand"><div class="logo">⚡</div><div><h1>LYCEUM CLASH</h1><small>COLYSEUS ARENA • v2.0</small></div></div>
+      <div class="brand"><div class="logo">⚡</div><div><h1>LYCEUM CLASH</h1><small>COLYSEUS ARENA • v2.1</small></div></div>
       <div class="server-pill" id="serverPill">● сервер</div>
     </div>
 
@@ -236,7 +236,10 @@ const OBSTACLES={
 };
 
 const client=new Client(location.origin);
-let room=null,lobby=null,snap=null,myId="",selectedHero=localStorage.getItem("clashHero")||"blaster";
+const QUERY=new URLSearchParams(location.search);
+const EMBEDDED=QUERY.get("embed")==="1";
+const QUERY_HERO=QUERY.get("hero");
+let room=null,lobby=null,snap=null,myId="",selectedHero=(QUERY_HERO&&HEROES[QUERY_HERO])?QUERY_HERO:(localStorage.getItem("clashHero")||"blaster");
 let input={x:0,y:0},seq=0,joyPointer=null,particles=[],tracers=[],damageTexts=[],screenShake=0,lastPing=0,pingMs=0;
 let lastFrame=performance.now(),cam={x:864,y:486},resultShown=false;
 
@@ -261,6 +264,9 @@ function renderHero(){
   $("heroHp").textContent=h.hp;$("heroSpeed").textContent=h.speed;$("heroDamage").textContent=h.damage;
 }
 buildHeroes();renderHero();
+const portalName=(QUERY.get("name")||"").trim().slice(0,20);
+if(portalName)$("playerName").value=portalName;
+if(EMBEDDED)document.documentElement.dataset.embedded="1";
 
 async function connectCreate(){
   try{
@@ -451,6 +457,20 @@ function addKill(text){const k=document.createElement("div");k.className="kill";
 function showResult(d){
   resultShown=true;$("result").classList.add("active");const win=d.winner;$("resultTitle").textContent=win?(win.name+" переміг!"):("Матч завершено");
   $("ranking").innerHTML=(d.ranking||[]).slice(0,5).map(r=>'<div class="rank-row"><b>#'+r.place+'</b><span>'+esc(r.name)+(r.isBot?' 🤖':'')+'</span><b>'+r.score+'★</b></div>').join("");
+
+  const mine=(d.ranking||[]).find(r=>r.id===myId||r.sessionId===myId);
+  if(mine&&window.parent!==window){
+    try{
+      window.parent.postMessage({
+        source:"LYCEUM_CLASH",
+        type:"MATCH_RESULT",
+        matchKey:(room?.roomId||"room")+"_"+String(d.round||snap?.round||1),
+        place:Number(mine.place)||3,
+        score:Number(mine.score)||0,
+        winner:mine.place===1
+      },"*");
+    }catch(_){}
+  }
 }
 let audioCtx=null;
 function sfx(type){
@@ -459,6 +479,7 @@ function sfx(type){
     const f={shot:180,hit:110,ko:70,super:420,start:280}[type]||200;o.frequency.value=f;o.type=type==="super"?"sine":"square";g.gain.setValueAtTime(.035,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+.09);o.start();o.stop(audioCtx.currentTime+.1);
   }catch(_){}
 }
+if(window.parent!==window){try{window.parent.postMessage({source:"LYCEUM_CLASH",type:"READY"},"*")}catch(_){}}
 fetch("/health",{cache:"no-store"}).then(r=>r.json()).then(d=>{$("serverPill").textContent="● SERVER v"+d.version;$("serverPill").style.color="#55efc4";setStatus("Сервер готовий • Colyseus WebSocket","ok")}).catch(()=>setStatus("Сервер недоступний","bad"));
 </script>
 </body>

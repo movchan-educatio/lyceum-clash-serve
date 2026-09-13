@@ -460,7 +460,7 @@ const server=defineServer({
   express:(app)=>{
     app.get("/",(_req,res)=>res.redirect("/game"));
     app.get("/health",(_req,res)=>res.json({
-      ok:true,service:"lyceum-clash-server",version:"2.0.0",node:process.version,
+      ok:true,service:"lyceum-clash-server",version:"2.1.0",node:process.version,
       multiplayer:"colyseus-websocket",bots:"server-authoritative"
     }));
     app.get("/game",(_req,res)=>{
@@ -473,4 +473,4 @@ const server=defineServer({
 });
 
 await server.listen(PORT);
-console.log("LYCEUM CLASH v2.0 listening on "+PORT);
+console.log("LYCEUM CLASH v2.1 listening on "+PORT);

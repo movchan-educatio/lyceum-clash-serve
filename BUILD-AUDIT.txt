@@ -1,46 +1,15 @@
-LYCEUM CLASH v2.0 BUILD AUDIT
+LYCEUM CLASH SERVER v2.1 — PORTAL BRIDGE
 
-Architecture:
-- Colyseus 0.18.5 server.
-- @colyseus/ws-transport 0.18.x.
-- Browser SDK @colyseus/sdk 0.18.2 from esm.sh.
-- Node pinned to 22.22.0.
-- No Firebase room sync.
+Compared with the already working v2.0:
+- Multiplayer/bot/server gameplay logic is unchanged.
+- game.html now accepts ?name= and ?hero= from the portal.
+- game.html sends MATCH_RESULT to its parent iframe after each match.
+- game.html sends READY when embedded.
+- Version marker updated to v2.1.
 
-Server authoritative:
-- human movement;
-- map collision;
-- bot AI;
-- bot movement;
-- shooting;
-- damage;
-- HP;
-- KO;
-- respawn;
-- score;
-- center objective;
-- match timer;
-- match result.
-
-Bots:
-- server-side;
-- fill empty slots to 5;
-- target nearest actor;
-- strafe at medium range;
-- retreat at close range;
-- contest central zone;
-- shoot and use super.
-
-Client:
-- 17 hero selector;
-- lobby/map/bot controls;
-- polished canvas rendering;
-- mobile joystick;
-- auto-aim;
-- FIRE/SUPER;
-- particles/tracers/damage text/shake/audio;
-- result screen.
+The portal validates message origin:
+https://lyceum-clash-serve.onrender.com
 
 Validation:
-- main.js passed node --check.
-- game.html module script passed node --check.
+- main.js node --check OK.
+- game.html module script node --check OK.
