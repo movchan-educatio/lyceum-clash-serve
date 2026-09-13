@@ -42,33 +42,97 @@ const HEROES = {
   illusionist: { hp:90,  speed:252, damage:21, cooldown:300 },
 };
 
-const MAPS = {
-  hall: {
-    name: "Головний хол",
-    obstacles: [
-      {x:360,y:190,w:190,h:72},{x:1178,y:190,w:190,h:72},
-      {x:360,y:710,w:190,h:72},{x:1178,y:710,w:190,h:72},
-      {x:760,y:355,w:208,h:64},{x:760,y:553,w:208,h:64}
+const MAP_SCALE = 1.35;
+const basePoint = (p) => ({ x: Math.round(p.x * MAP_SCALE), y: Math.round(p.y * MAP_SCALE) });
+const baseRect = (o) => ({ x: Math.round(o.x * MAP_SCALE), y: Math.round(o.y * MAP_SCALE), w: Math.round(o.w * MAP_SCALE), h: Math.round(o.h * MAP_SCALE), type:o.type||"block" });
+
+const MAPS_BASE = {
+  hall:{
+    name:"Центральний хол",icon:"🏫",floor:"#07111f",line:"#17345b",accent:"#38bdf8",
+    spawns:[{x:190,y:360},{x:640,y:120},{x:1090,y:360},{x:310,y:610},{x:970,y:610}],
+    obstacles:[
+      {x:174,y:156,w:154,h:58,type:"desk"},{x:415,y:118,w:70,h:132,type:"books"},
+      {x:952,y:154,w:154,h:58,type:"maptable"},{x:795,y:112,w:70,h:132,type:"globe"},
+      {x:174,y:508,w:164,h:60,type:"labtable"},{x:420,y:466,w:72,h:126,type:"lab"},
+      {x:942,y:506,w:164,h:58,type:"bench"},{x:790,y:474,w:74,h:116,type:"rack"},
+      {x:566,y:106,w:148,h:50,type:"hall"},{x:566,y:566,w:148,h:50,type:"hall"}
     ]
   },
-  library: {
-    name: "Бібліотека",
-    obstacles: [
-      {x:280,y:160,w:120,h:250},{x:510,y:160,w:120,h:250},
-      {x:1098,y:160,w:120,h:250},{x:1328,y:160,w:120,h:250},
-      {x:280,y:565,w:120,h:250},{x:510,y:565,w:120,h:250},
-      {x:1098,y:565,w:120,h:250},{x:1328,y:565,w:120,h:250}
+  library:{
+    name:"Велика бібліотека",icon:"📚",floor:"#100c0b",line:"#4a2c20",accent:"#fbbf24",
+    spawns:[{x:180,y:560},{x:640,y:105},{x:1100,y:560},{x:200,y:150},{x:1080,y:150}],
+    obstacles:[
+      {x:420,y:90,w:84,h:216,type:"books"},{x:776,y:90,w:84,h:216,type:"books"},
+      {x:420,y:414,w:84,h:216,type:"books"},{x:776,y:414,w:84,h:216,type:"books"},
+      {x:545,y:188,w:190,h:54,type:"desk"},{x:545,y:478,w:190,h:54,type:"desk"},
+      {x:168,y:330,w:180,h:54,type:"desk"},{x:932,y:330,w:180,h:54,type:"desk"}
     ]
   },
-  gym: {
-    name: "Спортзал",
-    obstacles: [
-      {x:180,y:225,w:150,h:55},{x:1398,y:225,w:150,h:55},
-      {x:180,y:692,w:150,h:55},{x:1398,y:692,w:150,h:55},
-      {x:780,y:235,w:168,h:54},{x:780,y:683,w:168,h:54}
+  gym:{
+    name:"Спортзал",icon:"🏀",floor:"#160d08",line:"#6b371f",accent:"#fb923c",
+    spawns:[{x:150,y:360},{x:640,y:100},{x:1130,y:360},{x:350,y:610},{x:930,y:610}],
+    obstacles:[
+      {x:150,y:92,w:110,h:54,type:"bench"},{x:1020,y:574,w:110,h:54,type:"bench"},
+      {x:352,y:82,w:70,h:150,type:"rack"},{x:858,y:488,w:70,h:150,type:"rack"},
+      {x:470,y:230,w:74,h:74,type:"ballrack"},{x:736,y:416,w:74,h:74,type:"ballrack"}
+    ]
+  },
+  lab:{
+    name:"Науковий корпус",icon:"🧪",floor:"#061213",line:"#104b4b",accent:"#34d399",
+    spawns:[{x:170,y:145},{x:1110,y:145},{x:640,y:610},{x:180,y:585},{x:1100,y:585}],
+    obstacles:[
+      {x:470,y:95,w:120,h:88,type:"labtable"},{x:690,y:95,w:120,h:88,type:"labtable"},
+      {x:470,y:537,w:120,h:88,type:"labtable"},{x:690,y:537,w:120,h:88,type:"labtable"},
+      {x:205,y:285,w:145,h:62,type:"lab"},{x:930,y:285,w:145,h:62,type:"lab"},
+      {x:555,y:300,w:170,h:120,type:"reactor"}
+    ]
+  },
+  yard:{
+    name:"Шкільне подвір’я",icon:"🌳",floor:"#0c1e18",line:"#2b5f4a",accent:"#4ade80",
+    spawns:[{x:170,y:570},{x:640,y:95},{x:1110,y:570},{x:180,y:135},{x:1100,y:135}],
+    obstacles:[
+      {x:430,y:110,w:90,h:160,type:"planter"},{x:760,y:110,w:90,h:160,type:"planter"},
+      {x:430,y:450,w:90,h:160,type:"planter"},{x:760,y:450,w:90,h:160,type:"planter"},
+      {x:188,y:330,w:150,h:50,type:"bench"},{x:942,y:330,w:150,h:50,type:"bench"},
+      {x:570,y:290,w:140,h:140,type:"fountain"}
+    ]
+  },
+  museum:{
+    name:"Галерея історії",icon:"🏛️",floor:"#120d0a",line:"#5b3a2c",accent:"#f59e0b",
+    spawns:[{x:145,y:360},{x:640,y:100},{x:1135,y:360},{x:330,y:610},{x:950,y:610}],
+    obstacles:[
+      {x:460,y:90,w:92,h:180,type:"display"},{x:728,y:90,w:92,h:180,type:"display"},
+      {x:460,y:450,w:92,h:180,type:"display"},{x:728,y:450,w:92,h:180,type:"display"},
+      {x:565,y:180,w:150,h:54,type:"desk"},{x:565,y:486,w:150,h:54,type:"desk"},
+      {x:190,y:325,w:140,h:52,type:"column"},{x:950,y:325,w:140,h:52,type:"column"}
+    ]
+  },
+  media:{
+    name:"Медіацентр",icon:"🎬",floor:"#080d18",line:"#243b66",accent:"#22d3ee",
+    spawns:[{x:175,y:580},{x:640,y:100},{x:1105,y:580},{x:190,y:145},{x:1090,y:145}],
+    obstacles:[
+      {x:462,y:105,w:100,h:165,type:"screen"},{x:718,y:105,w:100,h:165,type:"screen"},
+      {x:462,y:450,w:100,h:165,type:"server"},{x:718,y:450,w:100,h:165,type:"server"},
+      {x:565,y:212,w:150,h:54,type:"desk"},{x:565,y:454,w:150,h:54,type:"desk"}
+    ]
+  },
+  auditorium:{
+    name:"Актова зала",icon:"🎭",floor:"#100812",line:"#5b1d37",accent:"#fb7185",
+    spawns:[{x:145,y:550},{x:640,y:95},{x:1135,y:550},{x:170,y:150},{x:1110,y:150}],
+    obstacles:[
+      {x:410,y:118,w:110,h:70,type:"speaker"},{x:760,y:118,w:110,h:70,type:"speaker"},
+      {x:450,y:510,w:90,h:90,type:"seat"},{x:580,y:510,w:90,h:90,type:"seat"},{x:710,y:510,w:90,h:90,type:"seat"},
+      {x:120,y:390,w:150,h:52,type:"curtain"},{x:1010,y:390,w:150,h:52,type:"curtain"}
     ]
   }
 };
+
+const MAPS = Object.fromEntries(Object.entries(MAPS_BASE).map(([id,m])=>[id,{
+  ...m,
+  spawns:m.spawns.map(basePoint),
+  obstacles:m.obstacles.map(baseRect)
+}]));
+
 
 function clamp(v, a, b) { return Math.max(a, Math.min(b, Number(v) || 0)); }
 function clean(v, max = 24) { return String(v ?? "").replace(/[<>]/g, "").trim().slice(0, max); }
@@ -119,7 +183,8 @@ class LyceumClashRoom extends Room {
   maxClients = 5;
   autoDispose = true;
 
-  onCreate(){
+  async onCreate(){
+    this.roomId=await this.generateRoomCode();
     this.phase="lobby";
     this.players=new Map();
     this.bots=new Map();
@@ -145,6 +210,23 @@ class LyceumClashRoom extends Room {
     this.clock.setInterval(()=>this.snapshot(),SNAPSHOT_MS);
   }
 
+  async generateRoomCode(){
+    const channel="$lyceum-clash-room-codes";
+    const alphabet="ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+    const existing=await this.presence.smembers(channel);
+    let code="";
+    do{
+      code="";
+      for(let i=0;i<5;i++)code+=alphabet[Math.floor(Math.random()*alphabet.length)];
+    }while(existing.includes(code));
+    await this.presence.sadd(channel,code);
+    return code;
+  }
+
+  async onDispose(){
+    try{await this.presence.srem("$lyceum-clash-room-codes",this.roomId)}catch(_){}
+  }
+
   onJoin(client,options={}){
     if(this.phase!=="lobby")throw new Error("MATCH_ALREADY_STARTED");
 
@@ -155,12 +237,17 @@ class LyceumClashRoom extends Room {
     if(!this.hostSessionId)this.hostSessionId=client.sessionId;
     const hero=HEROES[options.hero]?options.hero:"blaster";
     const spec=heroSpec(hero);
-    const sp=SPAWNS[slot];
+    const sp=(MAPS[this.mapId]||MAPS.hall).spawns[slot]||SPAWNS[slot];
 
     this.players.set(client.sessionId,{
       id:client.sessionId,sessionId:client.sessionId,isBot:false,
       name:clean(options.name||("Учень "+(slot+1)))||("Учень "+(slot+1)),
-      hero,slot,x:sp.x,y:sp.y,angle:0,
+      hero,
+      skin:clean(options.skin||"student",24),
+      weapon:clean(options.weapon||"school_blaster",28),
+      weaponSkin:clean(options.weaponSkin||"default",24),
+      perk:clean(options.perk||"assault",20),
+      slot,x:sp.x,y:sp.y,angle:0,
       hp:spec.hp,maxHp:spec.hp,alive:true,score:0,deaths:0,super:0,
       respawnAt:0,lastShotAt:0,input:{dx:0,dy:0,seq:0}
     });
@@ -233,7 +320,8 @@ class LyceumClashRoom extends Room {
       const spec=heroSpec(hero),sp=SPAWNS[slot];
       this.bots.set(id,{
         id,sessionId:id,isBot:true,name:"BOT "+botNames[n++%botNames.length],
-        hero,slot,x:sp.x,y:sp.y,angle:0,hp:spec.hp,maxHp:spec.hp,
+        hero,skin:["student","hoodie","varsity","sport","cyber"][slot%5],weapon:["school_blaster","pulse_smg","prism_rifle","marker_blaster","laser_ruler"][slot%5],weaponSkin:["default","neon","gold","frost","shadow"][slot%5],perk:["assault","agile","guard"][slot%3],
+        slot,x:sp.x,y:sp.y,angle:0,hp:spec.hp,maxHp:spec.hp,
         alive:true,score:0,deaths:0,super:0,respawnAt:0,lastShotAt:0,
         input:{dx:0,dy:0,seq:0},brainAt:0,targetId:""
       });
@@ -256,7 +344,7 @@ class LyceumClashRoom extends Room {
     this.fillBots();
 
     for(const a of this.actors()){
-      const sp=SPAWNS[a.slot]||SPAWNS[0], spec=heroSpec(a.hero);
+      const sp=(MAPS[this.mapId]||MAPS.hall).spawns[a.slot]||SPAWNS[a.slot]||SPAWNS[0], spec=heroSpec(a.hero);
       a.x=sp.x;a.y=sp.y;a.angle=0;a.maxHp=spec.hp;a.hp=spec.hp;
       a.alive=true;a.score=0;a.deaths=0;a.super=0;a.respawnAt=0;a.lastShotAt=0;
       a.input={dx:0,dy:0,seq:0};
@@ -350,7 +438,7 @@ class LyceumClashRoom extends Room {
   }
 
   respawn(a){
-    const sp=SPAWNS[a.slot]||SPAWNS[0],spec=heroSpec(a.hero);
+    const sp=(MAPS[this.mapId]||MAPS.hall).spawns[a.slot]||SPAWNS[a.slot]||SPAWNS[0],spec=heroSpec(a.hero);
     a.x=sp.x;a.y=sp.y;a.hp=spec.hp;a.maxHp=spec.hp;a.alive=true;a.respawnAt=0;
     this.broadcast("respawn",{sessionId:a.id,x:a.x,y:a.y});
   }
@@ -445,7 +533,7 @@ class LyceumClashRoom extends Room {
       serverNow:Date.now(),phase:this.phase,startedAt:this.startedAt,endsAt:this.endsAt,
       round:this.round,hostSessionId:this.hostSessionId,map:this.mapId,botFill:this.botFill,
       actors:this.actors().map(a=>({
-        id:a.id,sessionId:a.sessionId,name:a.name,hero:a.hero,slot:a.slot,isBot:!!a.isBot,
+        id:a.id,sessionId:a.sessionId,name:a.name,hero:a.hero,skin:a.skin||"student",weapon:a.weapon||"school_blaster",weaponSkin:a.weaponSkin||"default",perk:a.perk||"assault",slot:a.slot,isBot:!!a.isBot,
         x:Math.round(a.x*10)/10,y:Math.round(a.y*10)/10,angle:a.angle,
         hp:a.hp,maxHp:a.maxHp,alive:a.alive,score:a.score,deaths:a.deaths,
         super:Math.round(a.super),respawnAt:a.respawnAt,seq:a.input?.seq||0
@@ -460,7 +548,7 @@ const server=defineServer({
   express:(app)=>{
     app.get("/",(_req,res)=>res.redirect("/game"));
     app.get("/health",(_req,res)=>res.json({
-      ok:true,service:"lyceum-clash-server",version:"2.1.0",node:process.version,
+      ok:true,service:"lyceum-clash-server",version:"2.2.0",node:process.version,
       multiplayer:"colyseus-websocket",bots:"server-authoritative"
     }));
     app.get("/game",(_req,res)=>{
@@ -473,4 +561,4 @@ const server=defineServer({
 });
 
 await server.listen(PORT);
-console.log("LYCEUM CLASH v2.1 listening on "+PORT);
+console.log("LYCEUM CLASH v2.2 listening on "+PORT);
