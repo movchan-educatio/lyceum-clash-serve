@@ -162,7 +162,7 @@ body{margin:0;background:#07111f;color:white;font-family:Arial,sans-serif}.wrap{
 .card{background:#102039;padding:16px;border-radius:16px;margin-bottom:14px}
 input,button{padding:12px;border:0;border-radius:10px;margin:4px;font-weight:bold}
 button{background:#22c55e}#code{font-size:28px;letter-spacing:4px}.p{padding:8px;background:#19314f;margin:6px 0;border-radius:8px}
-canvas{width:100%;background:#061827;border-radius:12px;aspect-ratio:16/9}.row{display:flex;gap:8px;flex-wrap:wrap}
+canvas{width:100%;background:#061827;border-radius:12px;aspect-ratio:16/9;touch-action:none}.row{display:flex;gap:8px;flex-wrap:wrap}.controls{display:grid;grid-template-columns:repeat(3,70px);gap:6px;justify-content:center;margin-top:12px}.controls button{height:58px;font-size:24px;background:#2563eb;color:#fff}.controls .blank{visibility:hidden}#fire{background:#ef4444}
 </style>
 </head>
 <body><div class="wrap">
@@ -171,7 +171,15 @@ canvas{width:100%;background:#061827;border-radius:12px;aspect-ratio:16/9}.row{d
 <div class="row"><input id="joinCode" maxlength="12" placeholder="КОД"><button id="join">ПРИЄДНАТИСЯ</button></div>
 <div>Кімната: <b id="code">—</b></div><div id="status">Не підключено</div>
 <div id="players"></div><button id="start" style="display:none">▶ ПОЧАТИ МАТЧ</button></div>
-<div class="card"><canvas id="game" width="960" height="540"></canvas></div>
+<div class="card">
+<canvas id="game" width="960" height="540"></canvas>
+<div class="controls">
+  <span class="blank"></span><button data-dir="up">▲</button><span class="blank"></span>
+  <button data-dir="left">◀</button><button id="fire">🔥</button><button data-dir="right">▶</button>
+  <span class="blank"></span><button data-dir="down">▼</button><span class="blank"></span>
+</div>
+<div style="text-align:center;font-size:12px;opacity:.75;margin-top:8px">ПК: WASD / стрілки • Пробіл = постріл</div>
+</div>
 </div>
 <script type="module">
 const $=id=>document.getElementById(id);
@@ -188,6 +196,61 @@ const client=new Client(location.origin);
 $("status").textContent="SDK завантажено • можна створювати кімнату";
 $("status").style.color="#55efc4";
 let room=null,lobby=null,snapshot=null;
+
+const held=new Set();
+let aimAngle=0;
+let inputSeq=0;
+
+function currentInput(){
+  let dx=0,dy=0;
+  if(held.has("left"))dx-=1;
+  if(held.has("right"))dx+=1;
+  if(held.has("up"))dy-=1;
+  if(held.has("down"))dy+=1;
+  if(dx||dy)aimAngle=Math.atan2(dy,dx);
+  return {dx,dy};
+}
+
+setInterval(()=>{
+  if(!room)return;
+  const {dx,dy}=currentInput();
+  room.send("input",{dx,dy,angle:aimAngle,seq:++inputSeq});
+},50);
+
+function fire(){
+  if(room)room.send("shoot",{angle:aimAngle});
+}
+
+function keyDir(code){
+  return ({
+    ArrowUp:"up",KeyW:"up",
+    ArrowDown:"down",KeyS:"down",
+    ArrowLeft:"left",KeyA:"left",
+    ArrowRight:"right",KeyD:"right"
+  })[code];
+}
+
+window.addEventListener("keydown",e=>{
+  const d=keyDir(e.code);
+  if(d){held.add(d);e.preventDefault();}
+  if(e.code==="Space"){fire();e.preventDefault();}
+});
+window.addEventListener("keyup",e=>{
+  const d=keyDir(e.code);
+  if(d){held.delete(d);e.preventDefault();}
+});
+
+document.querySelectorAll("[data-dir]").forEach(btn=>{
+  const d=btn.dataset.dir;
+  const on=e=>{e.preventDefault();held.add(d)};
+  const off=e=>{e.preventDefault();held.delete(d)};
+  btn.addEventListener("pointerdown",on);
+  btn.addEventListener("pointerup",off);
+  btn.addEventListener("pointercancel",off);
+  btn.addEventListener("pointerleave",off);
+});
+$("fire").addEventListener("pointerdown",e=>{e.preventDefault();fire()});
+
 async function attach(){
   $("code").textContent=room.roomId;
   $("status").textContent="Підключено";
@@ -218,7 +281,7 @@ const server = defineServer({
   },
   express: (app) => {
     app.get("/", (_req,res)=>res.type("text").send("LYCEUM CLASH server online"));
-    app.get("/health", (_req,res)=>res.json({ok:true,service:"lyceum-clash-server",version:"1.2.0"}));
+    app.get("/health", (_req,res)=>res.json({ok:true,service:"lyceum-clash-server",version:"1.3.0"}));
     app.get("/test", (_req,res)=>res.type("html").send(TEST_HTML));
   }
 });
