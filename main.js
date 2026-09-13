@@ -4,7 +4,6 @@ import { readFileSync } from "node:fs";
 
 const PORT = Number(process.env.PORT || 2567);
 const GAME_HTML = readFileSync(new URL("./game.html", import.meta.url), "utf8");
-const COLYSEUS_BROWSER_SDK = readFileSync(new URL("./node_modules/@colyseus/sdk/dist/colyseus.js", import.meta.url), "utf8");
 
 const WORLD_W = 1728;
 const WORLD_H = 972;
@@ -831,13 +830,9 @@ const server=defineServer({
   express:(app)=>{
     app.get("/",(_req,res)=>res.redirect("/game"));
     app.get("/health",(_req,res)=>res.json({
-      ok:true,service:"lyceum-clash-server",version:"2.9.1",node:process.version,clientSdk:"0.18.5",
+      ok:true,service:"lyceum-clash-server",version:"2.9.3",node:process.version,clientSdk:"0.18.2",
       multiplayer:"colyseus-websocket",bots:"server-authoritative"
     }));
-    app.get("/colyseus.js",(_req,res)=>{
-      res.setHeader("Cache-Control","public, max-age=86400");
-      res.type("application/javascript").send(COLYSEUS_BROWSER_SDK);
-    });
     app.get("/game",(_req,res)=>{
       res.setHeader("Cache-Control","no-store, no-cache, must-revalidate, proxy-revalidate");
       res.setHeader("Pragma","no-cache");res.setHeader("Expires","0");
@@ -848,4 +843,4 @@ const server=defineServer({
 });
 
 await server.listen(PORT);
-console.log("LYCEUM CLASH v2.9.1 listening on "+PORT);
+console.log("LYCEUM CLASH v2.9.3 listening on "+PORT);

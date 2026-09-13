@@ -437,13 +437,22 @@ html[data-embedded="1"] .name-input{display:none!important}
   </div>
 </div>
 
-<script src="/colyseus.js?v=0182"></script>
 <script type="module">
-const Client = window.Colyseus?.Client;
-if(!Client){
-  const status=document.getElementById("status");
-  if(status){status.textContent="Не завантажився клієнт multiplayer. Оновіть сторінку.";status.className="status bad";}
-  throw new Error("COLYSEUS_CLIENT_NOT_LOADED");
+let ClientCtor=null;
+let client=null;
+async function ensureNetworkClient(){
+  if(client) return client;
+  setStatus("Підключаю multiplayer…");
+  try{
+    const mod=await import("https://esm.sh/@colyseus/sdk@0.18.2");
+    ClientCtor=mod.Client;
+    if(!ClientCtor) throw new Error("CLIENT_CONSTRUCTOR_MISSING");
+    client=new ClientCtor(location.origin);
+    return client;
+  }catch(err){
+    setStatus("Не вдалося завантажити multiplayer: "+(err?.message||err),"bad");
+    throw err;
+  }
 }
 
 const $=id=>document.getElementById(id);
@@ -505,7 +514,6 @@ const OBSTACLES={
 };
 
 
-const client=new Client(location.origin);
 const QUERY=new URLSearchParams(location.search);
 const EMBEDDED=QUERY.get("embed")==="1";
 const GRAPHICS_MODE=QUERY.get("quality")||"auto";
@@ -517,14 +525,14 @@ let lastFrame=performance.now(),cam={x:864,y:486},resultShown=false,lastAimAngle
 const renderActors=new Map(),renderProjectiles=new Map();
 let staticMapCache={id:"",canvas:null};
 let perfScale=GRAPHICS_MODE==="eco"?.55:1,perfAccum=0,perfFrames=0,perfStamp=performance.now();
-window.__LYCEUM_CLASH_CLIENT_READY=true;
+window.__LYCEUM_CLASH_UI_READY=true;
 
 function setStatus(text,type=""){const el=$("status");el.textContent=text;el.className="status "+type}
 function showView(id){document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));$(id).classList.add("active")}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function me(){return snap?.actors?.find(a=>a.id===myId)||null}
 function actorById(id){return snap?.actors?.find(a=>a.id===id)||null}
-setStatus("Сервер готовий • Colyseus 0.18.5","ok");
+setStatus("Інтерфейс готовий. Multiplayer завантажиться при створенні або вході в кімнату.","ok");
 
 function buildHeroes(){
   const list=$("heroList");list.innerHTML="";
@@ -576,7 +584,8 @@ renderConnectLoadout();
 async function connectCreate(){
   try{
     setStatus("Створюю кімнату…");
-    room=await client.create("lyceum_clash",{name:$("playerName").value||"Учень",hero:selectedHero,skin:portalSkin,weapon:portalWeapon,weaponSkin:portalWeaponSkin,perk:portalPerk});
+    const net=await ensureNetworkClient();
+    room=await net.create("lyceum_clash",{name:$("playerName").value||"Учень",hero:selectedHero,skin:portalSkin,weapon:portalWeapon,weaponSkin:portalWeaponSkin,perk:portalPerk});
     attachRoom();showView("lobbyView");setStatus("Кімнату створено","ok");
   }catch(e){setStatus("CREATE: "+(e?.message||e),"bad")}
 }
@@ -585,7 +594,8 @@ async function connectJoin(){
   if(!code)return setStatus("Введи код кімнати","bad");
   try{
     setStatus("Приєднуюся…");
-    room=await client.joinById(code,{name:$("playerName").value||"Учень",hero:selectedHero,skin:portalSkin,weapon:portalWeapon,weaponSkin:portalWeaponSkin,perk:portalPerk});
+    const net=await ensureNetworkClient();
+    room=await net.joinById(code,{name:$("playerName").value||"Учень",hero:selectedHero,skin:portalSkin,weapon:portalWeapon,weaponSkin:portalWeaponSkin,perk:portalPerk});
     attachRoom();showView("lobbyView");setStatus("Приєднано","ok");
   }catch(e){setStatus("JOIN: "+(e?.message||e),"bad")}
 }
@@ -1221,7 +1231,7 @@ function sfx(type,sub=""){
   else if(type==="end"){tone(190,.14,"triangle",.02,-60)}
 }
 if(window.parent!==window){try{window.parent.postMessage({source:"LYCEUM_CLASH",type:"READY"},"*")}catch(_){}}
-fetch("/health",{cache:"no-store"}).then(r=>r.json()).then(d=>{$("serverPill").textContent="● SERVER v"+d.version;$("serverPill").style.color="#55efc4";setStatus("Сервер готовий • Colyseus WebSocket","ok")}).catch(()=>setStatus("Сервер недоступний","bad"));
+fetch("/health",{cache:"no-store"}).then(r=>r.json()).then(d=>{$("serverPill").textContent="● SERVER v"+d.version;$("serverPill").style.color="#55efc4";setStatus("Сервер готовий • натисни Створити або Приєднатися","ok")}).catch(()=>setStatus("Сервер недоступний","bad"));
 </script>
 </body>
 </html>
