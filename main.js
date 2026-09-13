@@ -379,7 +379,14 @@ class LyceumClashRoom extends Room {
   shootActor(shooter,angle,source="player"){
     if(this.phase!=="playing"||!shooter||!shooter.alive)return;
     const now=Date.now(),spec=heroSpec(shooter.hero);
-    if(now-shooter.lastShotAt<spec.cooldown)return;
+    const botCooldown=shooter.isBot?1.95:1;
+    if(now-shooter.lastShotAt<spec.cooldown*botCooldown)return;
+
+    // Bots are deliberately less accurate and much less punishing than humans.
+    if(shooter.isBot){
+      angle+=(Math.random()-.5)*0.30;
+    }
+
     shooter.lastShotAt=now;shooter.angle=angle;
 
     const range=shooter.hero==="sniper"?680:520;
@@ -392,7 +399,8 @@ class LyceumClashRoom extends Room {
     });
 
     if(!found)return;
-    this.damageActor(shooter,found.target,spec.damage,false);
+    const damage=shooter.isBot?Math.max(8,Math.min(14,Math.round(spec.damage*.46))):spec.damage;
+    this.damageActor(shooter,found.target,damage,false);
   }
 
   damageActor(attacker,target,damage,isSuper=false){
@@ -471,7 +479,7 @@ class LyceumClashRoom extends Room {
       }
       b.input={dx,dy,seq:0};
 
-      if(best<600 && now-b.lastShotAt>heroSpec(b.hero).cooldown+140){
+      if(best<520 && now-b.lastShotAt>heroSpec(b.hero).cooldown*1.75+260){
         this.shootActor(b,ang,"bot");
       }
 
@@ -479,7 +487,7 @@ class LyceumClashRoom extends Room {
         b.super=0;
         for(const t of this.actors()){
           if(t.id===b.id||!t.alive)continue;
-          if(dist(b,t)<=190)this.damageActor(b,t,34,true);
+          if(dist(b,t)<=190)this.damageActor(b,t,20,true);
         }
         this.broadcast("super",{by:b.id,type:"burst",x:b.x,y:b.y,hits:1});
       }
@@ -502,7 +510,8 @@ class LyceumClashRoom extends Room {
         continue;
       }
       const spec=heroSpec(a.hero);
-      const p=resolveMove(a.x+a.input.dx*spec.speed*dt,a.y+a.input.dy*spec.speed*dt,25,this.mapId);
+      const moveSpeed=spec.speed*(a.isBot?.84:1);
+      const p=resolveMove(a.x+a.input.dx*moveSpeed*dt,a.y+a.input.dy*moveSpeed*dt,25,this.mapId);
       a.x=p.x;a.y=p.y;
     }
 
@@ -548,7 +557,7 @@ const server=defineServer({
   express:(app)=>{
     app.get("/",(_req,res)=>res.redirect("/game"));
     app.get("/health",(_req,res)=>res.json({
-      ok:true,service:"lyceum-clash-server",version:"2.2.0",node:process.version,
+      ok:true,service:"lyceum-clash-server",version:"2.3.0",node:process.version,
       multiplayer:"colyseus-websocket",bots:"server-authoritative"
     }));
     app.get("/game",(_req,res)=>{
@@ -561,4 +570,4 @@ const server=defineServer({
 });
 
 await server.listen(PORT);
-console.log("LYCEUM CLASH v2.2 listening on "+PORT);
+console.log("LYCEUM CLASH v2.3 listening on "+PORT);

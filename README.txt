@@ -1,28 +1,25 @@
-LYCEUM CLASH SERVER v2.2 — ORIGINAL LOOK + STABLE ROOMS
+LYCEUM CLASH SERVER v2.3 — GAMEPLAY + VISUAL POLISH
 
-WHY
-v2.1 multiplayer worked for HOST, but another account could fail to join and the standalone game's look was too different from the original portal game.
+Based directly on the working v2.2 Colyseus multiplayer.
 
-FIXES
-- Restored the known-working 5-character uppercase room-code architecture:
-  ABCDE...234...
-- Join sanitizes the code to exactly 5 uppercase characters.
-- 8 original LYCEUM CLASH arenas:
-  Central Hall, Library, Gym, Science, Yard, History Gallery, Media Center, Auditorium.
-- SMART BOTS remain server authoritative.
-- Human movement, shots, HP, KO, respawn, score remain server authoritative.
-- Portal hero/skin/weapon/weapon finish/perk are passed into the Colyseus game.
-- Cosmetics are visible in battle.
-- UI is reskinned to the original LYCEUM CLASH / ARENA XL visual language:
-  compact dark lobby, 5 slots, compact game HUD, old-style joystick/FIRE/SUPER.
-- The portal's original hero/shop menu remains the primary menu; the embedded game opens the compact room/lobby instead of trying to replace the portal identity.
+Changes requested from real phone/PC screenshots:
+- Heroes are substantially smaller on screen.
+- Portrait camera no longer massively zooms into one fighter.
+- New chibi fighter drawing is closer to the original LYCEUM CLASH:
+  body, head, hair silhouettes, arms/legs, weapon and skin colors.
+- Names and HP are compact; damage text is shifted away from nameplates.
+- Removed giant map title clutter.
+- Added map-specific floor materials and more depth.
+- Mobile HP/SUPER HUD is smaller.
+- FIRE / SUPER / joystick are smaller and cleaner.
 
-DEPLOY
-Replace in the Render server GitHub repo:
-main.js
-game.html
-package.json
-render.yaml
-.node-version
+Bots:
+- ~46% of normal hero damage, clamped to 8–14 per hit.
+- ~1.95x firing cooldown.
+- aim jitter.
+- shorter engagement range.
+- 16% slower movement.
+- weaker bot super.
+This should make bots useful opponents without killing a player in 3 hits.
 
-Then deploy latest commit.
+Stable networking / 5-char room codes / server-authoritative movement remain unchanged.
