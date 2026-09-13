@@ -156,7 +156,7 @@ const TEST_HTML = `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>LYCEUM CLASH test</title>
-<script src="https://unpkg.com/@colyseus/sdk@0.18.5/dist/colyseus.js"><\/script>
+
 <style>
 body{margin:0;background:#07111f;color:white;font-family:Arial,sans-serif}.wrap{max-width:800px;margin:auto;padding:20px}
 .card{background:#102039;padding:16px;border-radius:16px;margin-bottom:14px}
@@ -173,9 +173,20 @@ canvas{width:100%;background:#061827;border-radius:12px;aspect-ratio:16/9}.row{d
 <div id="players"></div><button id="start" style="display:none">▶ ПОЧАТИ МАТЧ</button></div>
 <div class="card"><canvas id="game" width="960" height="540"></canvas></div>
 </div>
-<script>
+<script type="module">
 const $=id=>document.getElementById(id);
-const client=new Colyseus.Client(location.origin);
+let Client;
+try{
+  ({Client}=await import("https://esm.sh/@colyseus/sdk@0.18.2"));
+}catch(e){
+  $("status").textContent="ПОМИЛКА: не завантажився Colyseus SDK";
+  $("status").style.color="#ff7675";
+  console.error("Colyseus SDK load failed",e);
+  throw e;
+}
+const client=new Client(location.origin);
+$("status").textContent="SDK завантажено • можна створювати кімнату";
+$("status").style.color="#55efc4";
 let room=null,lobby=null,snapshot=null;
 async function attach(){
   $("code").textContent=room.roomId;
@@ -191,8 +202,8 @@ function renderLobby(){
   $("players").innerHTML=(lobby?.players||[]).map(p=>'<div class="p">'+p.name+' • '+p.hero+(p.sessionId===lobby.hostSessionId?' • HOST':'')+'</div>').join('');
   $("start").style.display=room?.sessionId===lobby?.hostSessionId?'inline-block':'none';
 }
-$("create").onclick=async()=>{try{room=await client.create("lyceum_clash",{name:$("name").value,hero:"blaster"});await attach()}catch(e){alert(e.message)}};
-$("join").onclick=async()=>{try{room=await client.joinById($("joinCode").value.trim(),{name:$("name").value,hero:"blaster"});await attach()}catch(e){alert(e.message)}};
+$("create").onclick=async()=>{try{$("status").textContent="Створюю кімнату…";room=await client.create("lyceum_clash",{name:$("name").value,hero:"blaster"});await attach()}catch(e){$("status").textContent="CREATE ERROR: "+(e?.message||e);console.error(e)}};
+$("join").onclick=async()=>{try{$("status").textContent="Приєднуюся…";room=await client.joinById($("joinCode").value.trim(),{name:$("name").value,hero:"blaster"});await attach()}catch(e){$("status").textContent="JOIN ERROR: "+(e?.message||e);console.error(e)}};
 $("start").onclick=()=>room?.send("start");
 function render(){
   const c=$("game"),x=c.getContext("2d");x.clearRect(0,0,c.width,c.height);x.fillStyle="#061827";x.fillRect(0,0,c.width,c.height);
@@ -207,7 +218,7 @@ const server = defineServer({
   },
   express: (app) => {
     app.get("/", (_req,res)=>res.type("text").send("LYCEUM CLASH server online"));
-    app.get("/health", (_req,res)=>res.json({ok:true,service:"lyceum-clash-server",version:"1.1.0"}));
+    app.get("/health", (_req,res)=>res.json({ok:true,service:"lyceum-clash-server",version:"1.2.0"}));
     app.get("/test", (_req,res)=>res.type("html").send(TEST_HTML));
   }
 });
