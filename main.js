@@ -54,18 +54,6 @@ const BOT_LEVELS={
   normal:{aim:.24,fireMul:1.48,speed:.88,damage:.74,react:300,superChance:.52,cover:.55},
   hard:{aim:.12,fireMul:1.14,speed:.96,damage:.88,react:180,superChance:.74,cover:.38}
 };
-const MODES={
-  clash:{label:"CLASH",max:5,respawn:true,zone:1,ko:5},
-  control:{label:"КОНТРОЛЬ ДЗВОНУ",max:5,respawn:true,zone:3,ko:2},
-  team2v2:{label:"КОМАНДНИЙ 2v2",max:4,respawn:true,zone:1,ko:5,teams:true},
-  last:{label:"ОСТАННІЙ УЧЕНЬ",max:5,respawn:false,zone:0,ko:10}
-};
-const PERKS={
-  assault:{label:"Штурм",superGain:1.05},
-  agile:{label:"Маневр",speed:1.025},
-  guard:{label:"Захист",damageTaken:.97},
-  focus:{label:"Фокус",spread:.94}
-};
 const ENERGY_PADS=[
   {x:CENTER_X-310,y:CENTER_Y},{x:CENTER_X+310,y:CENTER_Y},
   {x:CENTER_X,y:CENTER_Y-250},{x:CENTER_X,y:CENTER_Y+250}
@@ -236,9 +224,6 @@ class LyceumClashRoom extends Room {
     this.mapId="hall";
     this.botFill=true;
     this.botDifficulty="normal";
-    this.mode="clash";
-    this.mapEvent={lightsOut:false,doorsOpen:true,coverX:CENTER_X,phase:0};
-    this.nextMapEventAt=0;
     this.objectiveClock=0;
     this.passiveClock=0;
     this.botCounter=0;
@@ -253,9 +238,6 @@ class LyceumClashRoom extends Room {
     this.onMessage("map",(client,data)=>this.setMap(client,data));
     this.onMessage("bots",(client,data)=>this.setBots(client,data));
     this.onMessage("botDifficulty",(client,data)=>this.setBotDifficulty(client,data));
-    this.onMessage("mode",(client,data)=>this.setMode(client,data));
-    this.onMessage("ready",(client,data)=>this.setReady(client,data));
-    this.onMessage("rematch",(client)=>this.rematch(client));
     this.onMessage("ping",(client,data)=>client.send("pong",{t:data?.t||Date.now(),serverNow:Date.now()}));
 
     this.clock.setInterval(()=>this.tick(),TICK_MS);
@@ -293,19 +275,16 @@ class LyceumClashRoom extends Room {
     a.padCooldownUntil=0;
     a.lastShotAt=0;
     a.recoil=0;
-    a.lastPadAt=0;
   }
 
   onJoin(client,options={}){
     if(this.phase!=="lobby")throw new Error("MATCH_ALREADY_STARTED");
 
     const used=new Set([...this.players.values()].map(p=>p.slot));
-    const roomMax=MODES[this.mode]?.max||5;
-    let slot=0;while(used.has(slot)&&slot<roomMax)slot++;
-    if(slot>=roomMax)throw new Error("ROOM_FULL");
+    let slot=0;while(used.has(slot)&&slot<5)slot++;
+    if(slot>=5)throw new Error("ROOM_FULL");
 
-    const isFirst=!this.hostSessionId;
-    if(isFirst)this.hostSessionId=client.sessionId;
+    if(!this.hostSessionId)this.hostSessionId=client.sessionId;
     const hero=HEROES[options.hero]?options.hero:"blaster";
     const spec=heroSpec(hero);
     const sp=(MAPS[this.mapId]||MAPS.hall).spawns[slot]||SPAWNS[slot];
@@ -316,16 +295,10 @@ class LyceumClashRoom extends Room {
       skin:clean(options.skin||"student",24),
       weapon:clean(options.weapon||"school_blaster",28),
       weaponSkin:clean(options.weaponSkin||"default",24),
-      perk:PERKS[clean(options.perk||"assault",20)]?clean(options.perk||"assault",20):"assault",
-      shotEffect:clean(options.shotEffect||"classic",24),
-      koEffect:clean(options.koEffect||"burst",24),
-      frame:clean(options.frame||"none",24),
-      trail:clean(options.trail||"none",24),
-      ready:isFirst,team:slot%2,
+      perk:clean(options.perk||"assault",20),
       slot,x:sp.x,y:sp.y,angle:0,
       hp:spec.hp,maxHp:spec.hp,alive:true,score:0,deaths:0,super:0,
-      respawnAt:0,input:{dx:0,dy:0,seq:0},
-      kills:0,damageDone:0,controlSeconds:0,shots:0,hits:0
+      respawnAt:0,input:{dx:0,dy:0,seq:0}
     };
     this.initCombatState(p);
     this.players.set(client.sessionId,p);
@@ -342,7 +315,7 @@ class LyceumClashRoom extends Room {
     this.players.delete(client.sessionId);
     if(client.sessionId===this.hostSessionId){
       this.hostSessionId=this.players.keys().next().value||"";
-      if(this.hostSessionId){const nh=this.players.get(this.hostSessionId);if(nh)nh.ready=true;this.broadcast("host_changed",{hostSessionId:this.hostSessionId});}
+      if(this.hostSessionId)this.broadcast("host_changed",{hostSessionId:this.hostSessionId});
     }
     this.broadcastLobby();
   }
@@ -375,58 +348,13 @@ class LyceumClashRoom extends Room {
     this.botDifficulty=level;this.broadcastLobby();
   }
 
-  setMode(client,data={}){
-    if(client.sessionId!==this.hostSessionId||this.phase!=="lobby")return;
-    const mode=String(data.mode||"clash");if(!MODES[mode])return;
-    if(this.players.size>MODES[mode].max){client.send("server_error",{code:"MODE_FULL",message:"Для цього режиму забагато гравців у кімнаті."});return}
-    this.mode=mode;
-    for(const p of this.players.values()){p.team=p.slot%2;p.ready=p.sessionId===this.hostSessionId}
-    this.broadcastLobby();
-  }
-
-  setReady(client,data={}){
-    if(this.phase!=="lobby")return;const p=this.players.get(client.sessionId);if(!p)return;
-    p.ready=data.ready!==false;this.broadcastLobby();
-  }
-
-  rematch(client){
-    if(client.sessionId!==this.hostSessionId||this.phase!=="finished")return;
-    this.phase="lobby";this.unlock();this.bots.clear();this.projectiles.clear();
-    for(const p of this.players.values())p.ready=p.sessionId===this.hostSessionId;
-    this.broadcastLobby();this.snapshot();
-    this.clock.setTimeout(()=>{if(this.phase==="lobby"&&this.players.has(client.sessionId))this.startMatch(client,true)},450);
-  }
-
-  dynamicObstacles(now=Date.now()){
-    const out=[];
-    const phase=(now-(this.startedAt||now))/1800;
-    const coverX=CENTER_X-95+Math.sin(phase)*260;
-    this.mapEvent.coverX=coverX;
-    out.push({x:coverX,y:CENTER_Y-285,w:190,h:38,type:"moving_cover"});
-    if(!this.mapEvent.doorsOpen){
-      out.push({x:CENTER_X-22,y:135,w:44,h:150,type:"door"});
-      out.push({x:CENTER_X-22,y:WORLD_H-285,w:44,h:150,type:"door"});
-    }
-    if(this.bellRush){
-      out.push({x:CENTER_X-315,y:CENTER_Y-22,w:105,h:44,type:"temp_cover"});
-      out.push({x:CENTER_X+210,y:CENTER_Y-22,w:105,h:44,type:"temp_cover"});
-    }
-    return out;
-  }
-
-  resolveRoomMove(x,y,r,now=Date.now()){
-    let p=resolveMove(x,y,r,this.mapId);
-    for(const o of this.dynamicObstacles(now)){p=circleRectPush(p.x,p.y,r,o)}
-    return p;
-  }
-
   broadcastLobby(){
     this.broadcast("lobby",{
       code:this.roomId,phase:this.phase,hostSessionId:this.hostSessionId,
-      map:this.mapId,botFill:this.botFill,botDifficulty:this.botDifficulty,mode:this.mode,maxPlayers:MODES[this.mode].max,
+      map:this.mapId,botFill:this.botFill,botDifficulty:this.botDifficulty,maxPlayers:5,
       players:[...this.players.values()].sort((a,b)=>a.slot-b.slot).map(p=>({
-        sessionId:p.sessionId,name:p.name,hero:p.hero,slot:p.slot,team:p.team,ready:!!p.ready,
-        skin:p.skin,weapon:p.weapon,weaponSkin:p.weaponSkin,frame:p.frame
+        sessionId:p.sessionId,name:p.name,hero:p.hero,slot:p.slot,
+        skin:p.skin,weapon:p.weapon,weaponSkin:p.weaponSkin
       }))
     });
   }
@@ -438,8 +366,7 @@ class LyceumClashRoom extends Room {
     const botNames=["Nova","Vector","Pixel","Flash","Orbit"];
     const botHeroes=["sprinter","guardian","historian","chemist","sniper","phantom","stormer","engineer"];
     let n=0;
-    const maxActors=MODES[this.mode].max;
-    for(let slot=0;slot<maxActors;slot++){
+    for(let slot=0;slot<5;slot++){
       if(used.has(slot))continue;
       const id="BOT_"+(++this.botCounter);
       const hero=botHeroes[(slot+this.round)%botHeroes.length];
@@ -450,10 +377,9 @@ class LyceumClashRoom extends Room {
         hero,skin:["student","hoodie","varsity","sport","cyber"][slot%5],
         weapon:["school_blaster","pulse_smg","prism_rifle","marker_blaster","laser_ruler"][slot%5],
         weaponSkin:["default","neon","gold","frost","shadow"][slot%5],
-        perk:["assault","agile","guard","focus"][slot%4],shotEffect:["classic","spark","plasma","pixel"][slot%4],koEffect:["burst","stars","glitch"][slot%3],frame:"none",trail:["none","gold","lightning"][slot%3],team:slot%2,ready:true,
+        perk:["assault","agile","guard"][slot%3],
         slot,x:sp.x,y:sp.y,angle:0,hp:spec.hp,maxHp:spec.hp,
         alive:true,score:0,deaths:0,super:0,respawnAt:0,input:{dx:0,dy:0,seq:0},
-        kills:0,damageDone:0,controlSeconds:0,shots:0,hits:0,
         targetId:"",targetSwitchAt:0,brainAt:0
       };
       this.initCombatState(b);
@@ -461,31 +387,26 @@ class LyceumClashRoom extends Room {
     }
   }
 
-  startMatch(client,force=false){
+  startMatch(client){
     if(client.sessionId!==this.hostSessionId){
       client.send("server_error",{code:"NOT_HOST",message:"Лише HOST може почати матч."});return;
     }
     if(this.phase!=="lobby")return;
-    if(!force){
-      const waiting=[...this.players.values()].filter(p=>p.sessionId!==this.hostSessionId&&!p.ready);
-      if(waiting.length){client.send("server_error",{code:"NOT_READY",message:"Не всі гравці натиснули ГОТОВИЙ."});return}
-    }
 
     this.round+=1;this.phase="countdown";this.startedAt=Date.now()+1300;this.endsAt=this.startedAt+MATCH_MS;
     this.objectiveClock=0;this.passiveClock=0;this.bellRush=false;this.projectiles.clear();
-    this.mapEvent={lightsOut:false,doorsOpen:true,coverX:CENTER_X,phase:0};this.nextMapEventAt=this.startedAt+11000;
     this.fillBots();
 
     for(const a of this.actors()){
       const sp=(MAPS[this.mapId]||MAPS.hall).spawns[a.slot]||SPAWNS[a.slot]||SPAWNS[0],spec=heroSpec(a.hero);
       a.x=sp.x;a.y=sp.y;a.angle=0;a.maxHp=spec.hp;a.hp=spec.hp;a.alive=true;a.score=0;a.deaths=0;a.super=0;a.respawnAt=0;
-      a.input={dx:0,dy:0,seq:0};a.kills=0;a.damageDone=0;a.controlSeconds=0;a.shots=0;a.hits=0;a.team=a.slot%2;this.initCombatState(a);
+      a.input={dx:0,dy:0,seq:0};this.initCombatState(a);
     }
 
     this.lock();
     this.broadcast("match_started",{
       startedAt:this.startedAt,endsAt:this.endsAt,durationMs:MATCH_MS,round:this.round,
-      map:this.mapId,botCount:this.bots.size,botDifficulty:this.botDifficulty,mode:this.mode
+      map:this.mapId,botCount:this.bots.size,botDifficulty:this.botDifficulty
     });
     this.snapshot();
   }
@@ -540,7 +461,6 @@ class LyceumClashRoom extends Room {
     let spread=ws.spread;
     if(shooter.hero==="blaster")spread*=.55;
     if(shooter.hero==="sniper")spread*=.50;
-    if(shooter.perk==="focus")spread*=PERKS.focus.spread;
     if(bot)spread+=bot.aim;
     angle+=(Math.random()-.5)*spread*2;
 
@@ -551,7 +471,7 @@ class LyceumClashRoom extends Room {
     if(bot)damage*=bot.damage;
     damage=Math.max(6,Math.round(damage));
 
-    shooter.lastShotAt=now;shooter.angle=angle;shooter.ammo-=1;shooter.shots=(Number(shooter.shots)||0)+1;
+    shooter.lastShotAt=now;shooter.angle=angle;shooter.ammo-=1;
     const projectile=this.createProjectile(shooter,angle,damage,ws);
     this.broadcast("shot",{
       by:shooter.id,isBot:!!shooter.isBot,x:projectile.x,y:projectile.y,angle,
@@ -569,7 +489,7 @@ class LyceumClashRoom extends Room {
   }
 
   segmentHitsObstacle(x1,y1,x2,y2,radius){
-    const obs=[...(MAPS[this.mapId]||MAPS.hall).obstacles,...this.dynamicObstacles()];
+    const obs=(MAPS[this.mapId]||MAPS.hall).obstacles;
     const d=Math.hypot(x2-x1,y2-y1),steps=Math.max(1,Math.ceil(d/16));
     for(let i=1;i<=steps;i++){
       const t=i/steps,x=x1+(x2-x1)*t,y=y1+(y2-y1)*t;
@@ -617,7 +537,6 @@ class LyceumClashRoom extends Room {
 
   damageActor(attacker,target,damage,isSuper=false){
     if(!target?.alive)return false;
-    if(this.mode==="team2v2"&&attacker?.team===target?.team)return false;
     const now=Date.now();
     if(target.invulnerableUntil>now)return false;
 
@@ -630,28 +549,24 @@ class LyceumClashRoom extends Room {
     if(target.hero==="guardian")taken*=.84;
     if(target.hero==="historian"&&target.hp<target.maxHp*.42)taken*=.84;
     if(target.shieldUntil>now)taken*=.60;
-    if(target.perk==="guard")taken*=PERKS.guard.damageTaken;
     taken=Math.max(1,Math.round(taken));
 
     target.hp=Math.max(0,target.hp-taken);target.lastHitAt=now;
     const superGain=attacker.hero==="scholar"?30:attacker.hero==="hacker"?27:22;
-    const perkGain=attacker.perk==="assault"?PERKS.assault.superGain:1;
-    attacker.super=clamp(attacker.super+(isSuper?6:superGain)*perkGain,0,100);
-    attacker.damageDone=(Number(attacker.damageDone)||0)+taken;attacker.hits=(Number(attacker.hits)||0)+1;
+    attacker.super=clamp(attacker.super+(isSuper?6:superGain),0,100);
 
     this.broadcast("hit",{by:attacker.id,target:target.id,damage:taken,hp:target.hp,maxHp:target.maxHp,superHit:isSuper});
 
     if(target.hp<=0){
       target.alive=false;target.deaths+=1;target.respawnAt=now+RESPAWN_MS;target.vx=0;target.vy=0;
-      attacker.kills=(Number(attacker.kills)||0)+1;
-      attacker.score+=MODES[this.mode].ko;attacker.super=clamp(attacker.super+16,0,100);
+      attacker.score+=5;attacker.super=clamp(attacker.super+16,0,100);
       this.broadcast("ko",{by:attacker.id,target:target.id,score:attacker.score,respawnAt:target.respawnAt});
     }
     return true;
   }
 
   moveInstant(a,distance,angle){
-    const p=this.resolveRoomMove(a.x+Math.cos(angle)*distance,a.y+Math.sin(angle)*distance,25);
+    const p=resolveMove(a.x+Math.cos(angle)*distance,a.y+Math.sin(angle)*distance,25,this.mapId);
     a.x=p.x;a.y=p.y;a.vx=0;a.vy=0;
   }
 
@@ -799,7 +714,6 @@ class LyceumClashRoom extends Room {
     if(a.hero==="sprinter"&&Math.hypot(a.input.dx,a.input.dy)>.15)speed*=1.08;
     if(a.hero==="phantom")speed*=1.035;
     if(a.speedBoostUntil>now)speed*=1.24;
-    if(a.perk==="agile")speed*=PERKS.agile.speed;
     if(a.stunnedUntil>now)speed*=.20;
 
     const targetVx=a.input.dx*speed,targetVy=a.input.dy*speed;
@@ -810,7 +724,7 @@ class LyceumClashRoom extends Room {
     if(Math.hypot(a.input.dx,a.input.dy)<.04){a.vx*=.86;a.vy*=.86}
 
     const ox=a.x,oy=a.y;
-    const p=this.resolveRoomMove(a.x+a.vx*dt,a.y+a.vy*dt,25,now);
+    const p=resolveMove(a.x+a.vx*dt,a.y+a.vy*dt,25,this.mapId);
     a.x=p.x;a.y=p.y;
     if(Math.abs(a.x-ox-a.vx*dt)>2)a.vx*=.35;
     if(Math.abs(a.y-oy-a.vy*dt)>2)a.vy*=.35;
@@ -837,22 +751,6 @@ class LyceumClashRoom extends Room {
     }
   }
 
-  updateMapEvents(now){
-    if(now<this.nextMapEventAt)return;
-    this.mapEvent.phase+=1;
-    this.mapEvent.lightsOut=this.mapEvent.phase%3===1;
-    this.mapEvent.doorsOpen=this.mapEvent.phase%2===0;
-    this.nextMapEventAt=now+10500+Math.random()*3500;
-    this.broadcast("map_event",{...this.mapEvent,at:now});
-  }
-
-  maybeFinishLast(){
-    if(this.mode!=="last"||this.phase!=="playing"||Date.now()<this.startedAt+5000)return false;
-    const alive=this.actors().filter(a=>a.alive);
-    if(alive.length<=1){if(alive[0])alive[0].score+=12;this.finishMatch();return true}
-    return false;
-  }
-
   tick(){
     const now=Date.now();
     if(this.phase==="countdown"&&now>=this.startedAt)this.phase="playing";
@@ -863,14 +761,13 @@ class LyceumClashRoom extends Room {
       this.bellRush=true;this.broadcast("bell_rush",{at:now});
     }
 
-    this.updateMapEvents(now);
     this.updateBots(now);
     const dt=TICK_MS/1000;
     this.updateProjectiles(dt);
 
     for(const a of this.actors()){
       this.finishReload(a,now);
-      if(!a.alive){if(MODES[this.mode].respawn&&a.respawnAt&&now>=a.respawnAt)this.respawn(a);continue}
+      if(!a.alive){if(a.respawnAt&&now>=a.respawnAt)this.respawn(a);continue}
       this.applyMovement(a,dt,now);
     }
 
@@ -885,32 +782,20 @@ class LyceumClashRoom extends Room {
       for(const a of this.actors()){
         if(!a.alive)continue;
         if(Math.hypot(a.x-CENTER_X,a.y-CENTER_Y)<=126){
-          let pts=MODES[this.mode].zone;
-          if(this.bellRush&&pts>0)pts+=1;
-          if((a.hero==="geographer"||a.hero==="captain")&&pts>0)pts+=1;
-          a.score+=pts;a.controlSeconds=(Number(a.controlSeconds)||0)+1;
+          let pts=this.bellRush?2:1;
+          if(a.hero==="geographer"||a.hero==="captain")pts+=1;
+          a.score+=pts;
         }
       }
     }
-    this.maybeFinishLast();
   }
 
   finishMatch(){
-    if(this.phase==="finished")return;
     this.phase="finished";this.projectiles.clear();
-    const actors=this.actors();
-    const teamScores={0:0,1:0};if(this.mode==="team2v2")for(const a of actors)teamScores[a.team]=(teamScores[a.team]||0)+a.score;
-    actors.sort((a,b)=>{
-      if(this.mode==="last"&&a.alive!==b.alive)return a.alive?-1:1;
-      if(this.mode==="team2v2"&&teamScores[a.team]!==teamScores[b.team])return teamScores[b.team]-teamScores[a.team];
-      return b.score-a.score||b.kills-a.kills||a.deaths-b.deaths;
-    });
-    const ranking=actors.map((a,i)=>({
-      place:i+1,id:a.id,sessionId:a.sessionId,name:a.name,hero:a.hero,team:a.team,score:a.score,deaths:a.deaths,kills:a.kills||0,
-      damage:Math.round(a.damageDone||0),controlSeconds:Math.round(a.controlSeconds||0),shots:a.shots||0,hits:a.hits||0,isBot:!!a.isBot,alive:!!a.alive
+    const ranking=this.actors().sort((a,b)=>b.score-a.score||a.deaths-b.deaths).map((a,i)=>({
+      place:i+1,id:a.id,name:a.name,score:a.score,deaths:a.deaths,isBot:!!a.isBot
     }));
-    const winnerTeam=this.mode==="team2v2"?(teamScores[0]>=teamScores[1]?0:1):null;
-    this.broadcast("match_ended",{round:this.round,mode:this.mode,ranking,winner:ranking[0]||null,winnerTeam,teamScores});
+    this.broadcast("match_ended",{round:this.round,ranking,winner:ranking[0]||null});
     this.unlock();
     this.clock.setTimeout(()=>{
       if(this.phase!=="finished")return;
@@ -921,15 +806,15 @@ class LyceumClashRoom extends Room {
   snapshot(){
     this.broadcast("snapshot",{
       serverNow:Date.now(),phase:this.phase,startedAt:this.startedAt,endsAt:this.endsAt,round:this.round,
-      hostSessionId:this.hostSessionId,map:this.mapId,botFill:this.botFill,botDifficulty:this.botDifficulty,mode:this.mode,bellRush:this.bellRush,
-      pads:ENERGY_PADS,mapEvent:{...this.mapEvent,dynamic:this.dynamicObstacles()},
+      hostSessionId:this.hostSessionId,map:this.mapId,botFill:this.botFill,botDifficulty:this.botDifficulty,bellRush:this.bellRush,
+      pads:ENERGY_PADS,
       actors:this.actors().map(a=>({
         id:a.id,sessionId:a.sessionId,name:a.name,hero:a.hero,skin:a.skin||"student",
-        weapon:a.weapon||"school_blaster",weaponSkin:a.weaponSkin||"default",perk:a.perk||"assault",shotEffect:a.shotEffect||"classic",koEffect:a.koEffect||"burst",frame:a.frame||"none",trail:a.trail||"none",
-        slot:a.slot,team:a.team,isBot:!!a.isBot,x:Math.round(a.x*10)/10,y:Math.round(a.y*10)/10,angle:a.angle,
+        weapon:a.weapon||"school_blaster",weaponSkin:a.weaponSkin||"default",perk:a.perk||"assault",
+        slot:a.slot,isBot:!!a.isBot,x:Math.round(a.x*10)/10,y:Math.round(a.y*10)/10,angle:a.angle,
         hp:a.hp,maxHp:a.maxHp,alive:a.alive,score:a.score,deaths:a.deaths,super:Math.round(a.super),
         respawnAt:a.respawnAt,seq:a.input?.seq||0,ammo:a.ammo,reloadUntil:a.reloadUntil,
-        shieldUntil:a.shieldUntil,stunnedUntil:a.stunnedUntil,kills:a.kills||0,damage:Math.round(a.damageDone||0),controlSeconds:a.controlSeconds||0
+        shieldUntil:a.shieldUntil,stunnedUntil:a.stunnedUntil
       })),
       projectiles:[...this.projectiles.values()].map(p=>({
         id:p.id,ownerId:p.ownerId,x:Math.round(p.x*10)/10,y:Math.round(p.y*10)/10,
