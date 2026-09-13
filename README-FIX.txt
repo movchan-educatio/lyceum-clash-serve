@@ -1,32 +1,20 @@
-LYCEUM CLASH SERVER FIX 1.4 — MOVEMENT
+LYCEUM CLASH SERVER FIX 1.4.1 — NODE 22
 
-Причини, які тепер відсікаємо:
-- один пристрій може тримати старий /test у кеші;
-- не було видно, чи input реально доходить до сервера.
+ПРИЧИНА:
+Render запустив сервер на Node.js v26.8.2.
+У package.json було engines.node = ">=20", а Render попереджає, що такий
+необмежений діапазон може автоматично перейти на найновішу major-версію Node.
 
-Що змінилось:
-1. /test має Cache-Control: no-store.
-2. На обох пристроях зверху має бути v1.4.
-3. Рух дозволений навіть у lobby, START не потрібен для цього тесту.
-4. Сервер відповідає input_ack на кожний input.
-5. На екрані видно:
-   input: N
-   ack: dx,dy @ x,y
-   phase
-   held
+Для стабільності Colyseus 0.18 сервер тепер зафіксований на Node 22.22.0.
 
-Як тестувати:
-1. Замінити тільки main.js у GitHub.
-2. Commit -> Render deploy -> Live.
-3. На ОБОХ пристроях відкрити:
-   https://lyceum-clash-serve.onrender.com/test?v=14
-4. На ОБОХ має бути напис v1.4 і стрілки.
-5. Створити кімнату / приєднатися.
-6. НЕ натискаючи START, затиснути стрілку.
-7. Точка має рухатися одразу.
+ЩО ЗАМІНИТИ У GITHUB:
+- main.js
+- package.json
+- render.yaml
+- додати .node-version
 
-Діагностика:
-- input не росте -> керування/стара сторінка.
-- input росте, ack не росте -> WebSocket/input.
-- input+ack ростуть, координати ack змінюються -> сервер рухає гравця.
-- координати змінюються, точка стоїть -> render snapshot.
+ДОДАТКОВО У RENDER:
+Settings / Environment -> NODE_VERSION = 22.22.0
+
+Після цього Manual Deploy -> Clear build cache & deploy / Deploy latest commit.
+У логах має бути Node 22.22.0, НЕ Node 26.
