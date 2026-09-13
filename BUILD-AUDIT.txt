@@ -1,0 +1,27 @@
+LYCEUM CLASH COLYSEUS SERVER — BUILD AUDIT
+
+Server:
+- Colyseus 0.18.5
+- WebSocket transport
+- Node.js 20+
+- 5-character custom room IDs
+- maxClients = 5
+- 30 Hz authoritative server tick
+- 20 Hz snapshot broadcast
+- 75-second matches
+- authoritative HP / KO / respawn
+- central scoring zone
+- host handoff
+- /health endpoint
+- /test two-device smoke test
+
+Important:
+- No Firebase room synchronization.
+- No Google account required for the standalone multiplayer smoke test.
+- This is a separate multiplayer server; the portal client integration is the next step after /test succeeds.
+
+Validation:
+- src/main.js: node --check OK
+- src/rooms/LyceumClashRoom.js: node --check OK
+- public/test.html inline JS: node --check OK
+- package.json: valid JSON

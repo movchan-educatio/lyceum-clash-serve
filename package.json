@@ -1,0 +1,17 @@
+{
+  "name": "lyceum-clash-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Authoritative Colyseus multiplayer server for LYCEUM CLASH",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/main.js"
+  },
+  "dependencies": {
+    "colyseus": "0.18.5",
+    "@colyseus/ws-transport": "^0.18.1"
+  }
+}

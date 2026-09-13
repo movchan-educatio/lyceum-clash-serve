@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: lyceum-clash-server
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: ALLOWED_ORIGIN
+        value: "*"
