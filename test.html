@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>LYCEUM CLASH — multiplayer test</title>
+  <script src="https://unpkg.com/@colyseus/sdk@0.18.5/dist/colyseus.js"></script>
+  <style>
+    *{box-sizing:border-box} body{margin:0;background:#07111f;color:#eef6ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif}
+    .wrap{max-width:920px;margin:auto;padding:18px}.card{background:#0e1c30;border:1px solid #284263;border-radius:20px;padding:16px;margin-bottom:14px}
+    h1{font-size:24px;margin:0 0 8px}.muted{color:#9fb3c8;font-size:13px}.row{display:flex;gap:9px;flex-wrap:wrap}
+    input,select,button{border:0;border-radius:13px;padding:12px 14px;font-weight:800;font-size:15px}
+    input,select{background:#172a43;color:white;min-width:145px;flex:1}button{background:#20c997;color:#04131a;cursor:pointer}
+    button.secondary{background:#39a0ff;color:white}button.warn{background:#ffca3a;color:#211900}button:disabled{opacity:.45}
+    #code{font-size:28px;letter-spacing:4px;font-weight:1000;color:#6ee7ff}
+    #players{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px;margin-top:10px}
+    .p{padding:10px;border-radius:12px;background:#152943;border:1px solid #284263;font-size:13px}
+    canvas{width:100%;aspect-ratio:16/9;background:#071827;border-radius:16px;touch-action:none;display:block}
+    #log{height:130px;overflow:auto;background:#05101c;padding:10px;border-radius:12px;font:12px ui-monospace,monospace;white-space:pre-wrap}
+    .status{font-weight:900}.ok{color:#55efc4}.bad{color:#ff7675}
+    .controls{display:grid;grid-template-columns:repeat(3,64px);gap:5px;justify-content:center;margin-top:10px}
+    .controls button{height:56px;padding:0;font-size:24px;user-select:none;-webkit-user-select:none}
+    .controls .blank{visibility:hidden}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>🎮 LYCEUM CLASH — тест нового сервера</h1>
+    <div class="muted">Відкрий цю сторінку на двох пристроях. Один створює кімнату, другий вводить 5-символьний код.</div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <input id="name" placeholder="Ім'я" value="Учень">
+      <select id="hero">
+        <option value="blaster">Blaster</option><option value="sprinter">Sprinter</option>
+        <option value="guardian">Guardian</option><option value="sniper">Sniper</option>
+        <option value="historian">Historian</option><option value="geographer">Geographer</option>
+      </select>
+      <button id="create">СТВОРИТИ</button>
+    </div>
+    <div class="row" style="margin-top:9px">
+      <input id="joinCode" maxlength="5" placeholder="КОД КІМНАТИ" style="text-transform:uppercase">
+      <button id="join" class="secondary">ПРИЄДНАТИСЯ</button>
+    </div>
+    <div style="margin-top:12px">Кімната: <span id="code">—</span></div>
+    <div class="status" id="status">Не підключено</div>
+    <div id="players"></div>
+    <button id="start" class="warn" style="display:none;margin-top:12px">▶ ПОЧАТИ МАТЧ</button>
+  </div>
+
+  <div class="card">
+    <canvas id="game" width="960" height="540"></canvas>
+    <div class="controls">
+      <span class="blank"></span><button data-dir="up">▲</button><span class="blank"></span>
+      <button data-dir="left">◀</button><button id="fire">🔥</button><button data-dir="right">▶</button>
+      <span class="blank"></span><button data-dir="down">▼</button><span class="blank"></span>
+    </div>
+    <div class="muted" style="text-align:center;margin-top:6px">ПК: WASD/стрілки + пробіл. Телефон: кнопки.</div>
+  </div>
+
+  <div class="card">
+    <div class="muted">Журнал з'єднання</div>
+    <div id="log"></div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const logEl = $("log");
+  const statusEl = $("status");
+  const canvas = $("game");
+  const ctx = canvas.getContext("2d");
+
+  let room = null;
+  let lobby = null;
+  let snapshot = null;
+  let inputSeq = 0;
+  let angle = 0;
+  const held = new Set();
+
+  function log(...args) {
+    const line = `[${new Date().toLocaleTimeString()}] ${args.map(x => typeof x === "string" ? x : JSON.stringify(x)).join(" ")}`;
+    logEl.textContent += line + "\n";
+    logEl.scrollTop = logEl.scrollHeight;
+    console.log(...args);
+  }
+
+  function setStatus(text, ok = true) {
+    statusEl.textContent = text;
+    statusEl.className = "status " + (ok ? "ok" : "bad");
+  }
+
+  const client = new Colyseus.Client(location.origin);
+
+  async function createRoom() {
+    try {
+      setStatus("Створюю кімнату…");
+      room = await client.create("lyceum_clash", {
+        name: $("name").value || "HOST",
+        hero: $("hero").value
+      });
+      attachRoom();
+      log("Створено кімнату", room.roomId);
+    } catch (e) {
+      setStatus("Помилка створення", false);
+      log("CREATE ERROR", String(e?.message || e));
+    }
+  }
+
+  async function joinRoom() {
+    const code = $("joinCode").value.trim().toUpperCase();
+    if (code.length !== 5) return setStatus("Введи 5-символьний код", false);
+    try {
+      setStatus("Підключаюся…");
+      room = await client.joinById(code, {
+        name: $("name").value || "Учень",
+        hero: $("hero").value
+      });
+      attachRoom();
+      log("Приєднано до", room.roomId);
+    } catch (e) {
+      setStatus("Не вдалося приєднатися", false);
+      log("JOIN ERROR", String(e?.message || e));
+    }
+  }
+
+  function attachRoom() {
+    $("code").textContent = room.roomId;
+    setStatus(`Підключено • session ${room.sessionId.slice(0,6)}`);
+
+    room.onMessage("room_ready", (data) => {
+      log("ROOM READY", data);
+      $("code").textContent = data.code;
+    });
+
+    room.onMessage("lobby", (data) => {
+      lobby = data;
+      renderLobby();
+    });
+
+    room.onMessage("host_changed", (data) => {
+      log("HOST CHANGED", data);
+      if (lobby) {
+        lobby.hostSessionId = data.hostSessionId;
+        renderLobby();
+      }
+    });
+
+    room.onMessage("match_started", (data) => {
+      log("MATCH STARTED", data);
+      setStatus("Матч починається!");
+    });
+
+    room.onMessage("snapshot", (data) => {
+      snapshot = data;
+      if (data.phase === "playing" || data.phase === "countdown") {
+        setStatus(`Матч • ${data.phase} • ${data.players.length} гравців`);
+      }
+      renderGame();
+    });
+
+    room.onMessage("shot", (data) => log("SHOT", data.by));
+    room.onMessage("hit", (data) => log("HIT", data));
+    room.onMessage("ko", (data) => log("KO", data));
+    room.onMessage("match_ended", (data) => {
+      log("MATCH ENDED", data);
+      setStatus(`Фініш • переможець: ${data.winner?.name || "—"}`);
+    });
+    room.onMessage("server_error", (data) => {
+      setStatus(data.message || data.code, false);
+      log("SERVER ERROR", data);
+    });
+
+    room.onLeave((code) => {
+      setStatus(`Відключено (${code})`, false);
+      log("LEAVE", code);
+    });
+    room.onError((code, message) => {
+      setStatus(`Помилка ${code}: ${message}`, false);
+      log("ROOM ERROR", code, message);
+    });
+  }
+
+  function renderLobby() {
+    if (!lobby || !room) return;
+    $("players").innerHTML = lobby.players.map(p => `
+      <div class="p">
+        <b>${escapeHtml(p.name)}</b><br>
+        slot ${p.slot + 1} • ${escapeHtml(p.hero)}
+        ${p.sessionId === lobby.hostSessionId ? "<br>👑 HOST" : ""}
+      </div>`).join("");
+
+    const isHost = room.sessionId === lobby.hostSessionId;
+    $("start").style.display = isHost ? "inline-block" : "none";
+    $("start").disabled = !isHost;
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function inputVector() {
+    let dx = 0, dy = 0;
+    if (held.has("left")) dx -= 1;
+    if (held.has("right")) dx += 1;
+    if (held.has("up")) dy -= 1;
+    if (held.has("down")) dy += 1;
+    return { dx, dy };
+  }
+
+  setInterval(() => {
+    if (!room) return;
+    const { dx, dy } = inputVector();
+    if (dx || dy) angle = Math.atan2(dy, dx);
+    room.send("input", { dx, dy, angle, seq: ++inputSeq });
+  }, 50);
+
+  function fire() {
+    if (room) room.send("shoot", { angle });
+  }
+
+  function renderGame() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#071827";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const sx = canvas.width / 1728;
+    const sy = canvas.height / 972;
+
+    // bell zone
+    ctx.beginPath();
+    ctx.arc(canvas.width/2, canvas.height/2, 120*sx, 0, Math.PI*2);
+    ctx.fillStyle = "rgba(255,202,58,.13)";
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255,202,58,.75)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    if (!snapshot) return;
+
+    for (const p of snapshot.players) {
+      const x = p.x * sx, y = p.y * sy;
+      ctx.globalAlpha = p.alive ? 1 : .25;
+      ctx.beginPath();
+      ctx.arc(x, y, 15, 0, Math.PI*2);
+      ctx.fillStyle = p.sessionId === room?.sessionId ? "#55efc4" : "#74b9ff";
+      ctx.fill();
+
+      ctx.fillStyle = "#fff";
+      ctx.font = "12px system-ui";
+      ctx.fillText(`${p.name} ${p.score}`, x - 22, y - 23);
+
+      ctx.fillStyle = "#243b53";
+      ctx.fillRect(x - 20, y + 19, 40, 5);
+      ctx.fillStyle = "#ff7675";
+      ctx.fillRect(x - 20, y + 19, 40 * (p.hp / Math.max(1,p.maxHp)), 5);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  function dirFromKey(key, down) {
+    const map = {
+      ArrowUp: "up", KeyW: "up",
+      ArrowDown: "down", KeyS: "down",
+      ArrowLeft: "left", KeyA: "left",
+      ArrowRight: "right", KeyD: "right"
+    };
+    const dir = map[key];
+    if (!dir) return;
+    down ? held.add(dir) : held.delete(dir);
+  }
+
+  addEventListener("keydown", e => {
+    dirFromKey(e.code, true);
+    if (e.code === "Space") { e.preventDefault(); fire(); }
+  });
+  addEventListener("keyup", e => dirFromKey(e.code, false));
+
+  document.querySelectorAll("[data-dir]").forEach(btn => {
+    const dir = btn.dataset.dir;
+    const on = e => { e.preventDefault(); held.add(dir); };
+    const off = e => { e.preventDefault(); held.delete(dir); };
+    btn.addEventListener("pointerdown", on);
+    btn.addEventListener("pointerup", off);
+    btn.addEventListener("pointercancel", off);
+    btn.addEventListener("pointerleave", off);
+  });
+
+  $("fire").addEventListener("pointerdown", e => { e.preventDefault(); fire(); });
+  $("create").onclick = createRoom;
+  $("join").onclick = joinRoom;
+  $("start").onclick = () => room?.send("start");
+
+  renderGame();
+})();
+</script>
+</body>
+</html>
