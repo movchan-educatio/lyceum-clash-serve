@@ -103,6 +103,10 @@ class LyceumClashRoom extends Room {
     if(m>1){dx/=m;dy/=m;}
     p.input={dx,dy};
     if(Number.isFinite(Number(data.angle))) p.angle=Number(data.angle);
+
+    client.send("input_ack",{
+      dx,dy,x:Math.round(p.x),y:Math.round(p.y),phase:this.phase,at:Date.now()
+    });
   }
 
   shoot(client,data={}){
@@ -114,9 +118,9 @@ class LyceumClashRoom extends Room {
   }
 
   tick(){
-    if(this.phase!=="playing") return;
     const now=Date.now();
-    if(now>=this.endsAt){
+
+    if(this.phase==="playing" && now>=this.endsAt){
       const ranking=[...this.players.values()].sort((a,b)=>b.score-a.score).map((p,i)=>({
         place:i+1,sessionId:p.sessionId,name:p.name,score:p.score
       }));
@@ -127,6 +131,7 @@ class LyceumClashRoom extends Room {
       return;
     }
 
+    // Smoke test: allow movement in lobby as well.
     const dt=(1000/30)/1000;
     for(const p of this.players.values()){
       if(!p.alive) continue;
@@ -166,10 +171,10 @@ canvas{width:100%;background:#061827;border-radius:12px;aspect-ratio:16/9;touch-
 </style>
 </head>
 <body><div class="wrap">
-<div class="card"><h2>LYCEUM CLASH — SERVER TEST</h2>
+<div class="card"><h2>LYCEUM CLASH — SERVER TEST <small style="font-size:12px;color:#55efc4">v1.4</small></h2>
 <div class="row"><input id="name" value="Учень"><button id="create">СТВОРИТИ</button></div>
 <div class="row"><input id="joinCode" maxlength="12" placeholder="КОД"><button id="join">ПРИЄДНАТИСЯ</button></div>
-<div>Кімната: <b id="code">—</b></div><div id="status">Не підключено</div>
+<div>Кімната: <b id="code">—</b></div><div id="status">Не підключено</div><div id="debug" style="margin-top:8px;font:12px monospace;color:#93c5fd">input: 0 • ack: — • phase: —</div>
 <div id="players"></div><button id="start" style="display:none">▶ ПОЧАТИ МАТЧ</button></div>
 <div class="card">
 <canvas id="game" width="960" height="540"></canvas>
@@ -195,7 +200,7 @@ try{
 const client=new Client(location.origin);
 $("status").textContent="SDK завантажено • можна створювати кімнату";
 $("status").style.color="#55efc4";
-let room=null,lobby=null,snapshot=null;
+let room=null,lobby=null,snapshot=null;let sentInputs=0,lastAck="—";
 
 const held=new Set();
 let aimAngle=0;
@@ -215,6 +220,9 @@ setInterval(()=>{
   if(!room)return;
   const {dx,dy}=currentInput();
   room.send("input",{dx,dy,angle:aimAngle,seq:++inputSeq});
+  sentInputs++;
+  const phase=snapshot?.phase||lobby?.phase||"—";
+  $("debug").textContent=`input: ${sentInputs} • ack: ${lastAck} • phase: ${phase} • held: ${[...held].join(",")||"—"}`;
 },50);
 
 function fire(){
@@ -255,6 +263,10 @@ async function attach(){
   $("code").textContent=room.roomId;
   $("status").textContent="Підключено";
   room.onMessage("room_ready",d=>{$("code").textContent=d.code});
+  room.onMessage("input_ack",d=>{
+    lastAck=`${d.dx},${d.dy} @ ${d.x},${d.y}`;
+    $("debug").textContent=`input: ${sentInputs} • ack: ${lastAck} • phase: ${d.phase}`;
+  });
   room.onMessage("lobby",d=>{lobby=d;renderLobby()});
   room.onMessage("match_started",d=>{$("status").textContent="МАТЧ ПОЧАВСЯ"});
   room.onMessage("snapshot",d=>{snapshot=d;render()});
@@ -281,8 +293,13 @@ const server = defineServer({
   },
   express: (app) => {
     app.get("/", (_req,res)=>res.type("text").send("LYCEUM CLASH server online"));
-    app.get("/health", (_req,res)=>res.json({ok:true,service:"lyceum-clash-server",version:"1.3.0"}));
-    app.get("/test", (_req,res)=>res.type("html").send(TEST_HTML));
+    app.get("/health", (_req,res)=>res.json({ok:true,service:"lyceum-clash-server",version:"1.4.0"}));
+    app.get("/test", (_req,res)=>{
+      res.setHeader("Cache-Control","no-store, no-cache, must-revalidate, proxy-revalidate");
+      res.setHeader("Pragma","no-cache");
+      res.setHeader("Expires","0");
+      res.type("html").send(TEST_HTML);
+    });
   }
 });
 
